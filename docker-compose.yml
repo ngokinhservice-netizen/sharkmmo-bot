@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sharkmmo-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CANBOSO_API_KEY=${CANBOSO_API_KEY}
+      - CANBOSO_BASE_URL=${CANBOSO_BASE_URL:-https://canboso.com}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-sharkmmo_admin_secret_key_2026}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:////app/data/sharkmmo.db}
+      - BANK_CODE=${BANK_CODE:-MB}
+      - BANK_ACCOUNT_NO=${BANK_ACCOUNT_NO:-0988888888}
+      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-SHARKMMO STORE}
+      - SEPAY_API_KEY=${SEPAY_API_KEY}
+      - DEFAULT_MARKUP_PERCENT=${DEFAULT_MARKUP_PERCENT:-20.0}
+      - DEFAULT_ROUND_TO=${DEFAULT_ROUND_TO:-1000}
+      - SOURCE_BALANCE_ALERT_THRESHOLD=${SOURCE_BALANCE_ALERT_THRESHOLD:-100000.0}
+    volumes:
+      - sharkmmo-data:/app/data
+    networks:
+      - sharkmmo-network
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    container_name: sharkmmo-dashboard
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
+      - NEXT_PUBLIC_ADMIN_KEY=${ADMIN_API_KEY:-sharkmmo_admin_secret_key_2026}
+    depends_on:
+      - backend
+    networks:
+      - sharkmmo-network
+
+volumes:
+  sharkmmo-data:
+
+networks:
+  sharkmmo-network:
+    driver: bridge
