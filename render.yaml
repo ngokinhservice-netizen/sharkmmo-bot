@@ -5,10 +5,10 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     plan: free
-    region: singapore
+    region: oregon
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
+      - key: PYTHONPATH
+        value: .
       - key: BOT_TOKEN
         value: 9296323573:AAHL1jW2oODAzC7HxznYUkFv6N3HEHuv3uw
       - key: CANBOSO_API_KEY
