@@ -4,22 +4,28 @@ services:
     env: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    region: singapore
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
       - key: BOT_TOKEN
-        sync: false
+        value: 9296323573:AAHL1jW2oODAzC7HxznYUkFv6N3HEHuv3uw
       - key: CANBOSO_API_KEY
-        sync: false
+        value: tgb_3c16f012e7e3b854c6f0a2bc12a22336983be8116b61aef4
       - key: ADMIN_IDS
-        sync: false
+        value: "8650996593"
       - key: BANK_CODE
-        sync: false
+        value: VPB
       - key: BANK_ACCOUNT_NO
-        sync: false
+        value: "03429382622"
       - key: BANK_ACCOUNT_NAME
-        sync: false
+        value: LE DANG KHOA
       - key: ADMIN_API_KEY
-        generateValue: true
+        value: sharkmmo_admin_secret_key_2026
       - key: DATABASE_URL
         value: sqlite+aiosqlite:///./sharkmmo.db
+      - key: DEFAULT_MARKUP_PERCENT
+        value: "20.0"
+      - key: DEFAULT_ROUND_TO
+        value: "1000"
