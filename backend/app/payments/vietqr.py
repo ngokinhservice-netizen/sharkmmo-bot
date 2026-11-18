@@ -8,8 +8,10 @@ from backend.app.core.config import settings
 logger = logging.getLogger("sharkmmo.vietqr")
 
 BANK_BIN_MAP = {
-    "VPB": "970405",
-    "VPBANK": "970405",
+    "VPB": "970432",
+    "VPBANK": "970432",
+    "VBA": "970405",
+    "AGRIBANK": "970405",
     "MB": "970422",
     "MBBANK": "970422",
     "VCB": "970436",
@@ -76,7 +78,7 @@ async def get_vietqr_png_bytes(
     acc_name = account_name or settings.BANK_ACCOUNT_NAME
     tmpl = template or settings.VIETQR_TEMPLATE
 
-    bin_code = BANK_BIN_MAP.get(b_code, "970405")
+    bin_code = BANK_BIN_MAP.get(b_code, "970432")
 
     payload = {
         "accountNo": acc_no,
