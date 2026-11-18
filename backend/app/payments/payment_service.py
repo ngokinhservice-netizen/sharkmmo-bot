@@ -121,6 +121,25 @@ class PaymentService:
         await session.commit()
         logger.info(f"Payment confirmed: tx={tx.transaction_code}, amount={tx.amount}, user={user.telegram_id}, by={confirmed_by}")
 
+        # Send Telegram notification to user
+        if settings.BOT_TOKEN and not settings.BOT_TOKEN.startswith("dummy"):
+            try:
+                from backend.app.bot.bot import create_bot
+                bot = create_bot()
+                async with bot:
+                    msg = (
+                        "🎉 <b>NẠP TIỀN THÀNH CÔNG!</b>\n"
+                        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+                        f"🆔 Mã giao dịch: <code>{tx.transaction_code}</code>\n"
+                        f"💰 Số tiền: <b>+{tx.amount:,.0f} VND</b>\n"
+                        f"💳 Số dư ví hiện có: <b>{user.balance:,.0f} VND</b>\n\n"
+                        "⚡ <i>Hệ thống tự động cộng tiền qua SePay thành công!</i>\n"
+                        "Bấm <b>🛍️ Mua sản phẩm</b> để bắt đầu mua sắm ngay!"
+                    )
+                    await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode="HTML")
+            except Exception as e_notify:
+                logger.error(f"Failed to send deposit confirmation notification: {e_notify}")
+
         return {
             "success": True,
             "transaction_code": tx.transaction_code,

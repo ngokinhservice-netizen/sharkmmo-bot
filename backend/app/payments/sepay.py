@@ -97,6 +97,26 @@ class SePayProcessor:
                 session.add(auto_tx)
                 await session.commit()
                 logger.info(f"Auto-credited {amount_in} VND to user {telegram_id} based on memo match.")
+
+                # Send Telegram notification
+                if settings.BOT_TOKEN and not settings.BOT_TOKEN.startswith("dummy"):
+                    try:
+                        from backend.app.bot.bot import create_bot
+                        bot = create_bot()
+                        async with bot:
+                            msg = (
+                                "🎉 <b>NẠP TIỀN THÀNH CÔNG!</b>\n"
+                                "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+                                f"🆔 Mã giao dịch: <code>{tx_code}</code>\n"
+                                f"💰 Số tiền: <b>+{amount_in:,.0f} VND</b>\n"
+                                f"💳 Số dư ví hiện có: <b>{user.balance:,.0f} VND</b>\n\n"
+                                "⚡ <i>Hệ thống tự động cộng tiền qua SePay thành công!</i>\n"
+                                "Bấm <b>🛍️ Mua sản phẩm</b> để bắt đầu mua sắm ngay!"
+                            )
+                            await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode="HTML")
+                    except Exception as e_notify:
+                        logger.error(f"Failed to send deposit confirmation notification: {e_notify}")
+
                 return {
                     "success": True,
                     "auto_credited": True,
