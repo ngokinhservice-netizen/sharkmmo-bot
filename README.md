@@ -1,3 +1,13 @@
+---
+title: SHARKMMO Telegram Bot
+emoji: 🦈
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🦈 SHARKMMO — HỆ SINH THÁI BÁN SẢN PHẨM MMO TỰ ĐỘNG
 
 > **Slogan:** "Hệ sinh thái sản phẩm MMO tự động"  
