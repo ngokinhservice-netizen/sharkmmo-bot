@@ -1,147 +1,66 @@
 import math
-from typing import Optional
+from typing import Optional, Union
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
-from sqlalchemy import select, distinct, func
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from sqlalchemy import select, func, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.models.models import ProductCache
+from backend.app.models.models import ProductCache, User
 from backend.app.keyboards.menus import (
-    get_categories_keyboard,
-    get_products_pagination_keyboard,
-    get_product_detail_keyboard
+    get_store_catalog_keyboard,
+    get_product_detail_keyboard,
+    get_main_menu
 )
 
 router = Router(name="catalog")
-PAGE_SIZE = 5
+STORE_PAGE_SIZE = 12
 
 
-@router.message(F.text.in_(["🛍️ Mua sản phẩm", "📦 Danh mục sản phẩm"]))
-async def show_categories(message: Message, session: AsyncSession):
-    query = (
-        select(ProductCache.category, func.count(ProductCache.id))
-        .where(ProductCache.is_active == True)
-        .group_by(ProductCache.category)
-    )
-    res = await session.execute(query)
-    categories = [f"{cat} ({count})" for cat, count in res.all()]
-
-    if not categories:
-        await message.answer(
-            "📦 Hiện tại chưa có sản phẩm nào đang hoạt động. Vui lòng quay lại sau!",
-            parse_mode="HTML"
-        )
-        return
-
-    banner = (
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
-        "      💎 <b>SHARKMMO — DANH MỤC SẢN PHẨM</b> 💎\n"
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
-        "🔥 <i>Hệ sinh thái sản phẩm MMO & Tài khoản số tự động</i>\n"
-        "⚡ <b>Tự động giao hàng 24/7 • Bảo hành chu đáo</b>\n\n"
-        "╭───────────────────────╮\n"
-        "  📂 <b>VUI LÒNG CHỌN DANH MỤC:</b>\n"
-        "╰───────────────────────╯\n"
-        "👇 <i>Bấm chọn danh mục bên dưới để xem chi tiết:</i>"
-    )
-
-    await message.answer(
-        banner,
-        reply_markup=get_categories_keyboard(categories),
-        parse_mode="HTML"
-    )
-
-
-@router.callback_query(F.data == "categories")
-async def callback_categories(callback: CallbackQuery, session: AsyncSession):
-    query = (
-        select(ProductCache.category, func.count(ProductCache.id))
-        .where(ProductCache.is_active == True)
-        .group_by(ProductCache.category)
-    )
-    res = await session.execute(query)
-    categories = [f"{cat} ({count})" for cat, count in res.all()]
-
-    banner = (
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
-        "      💎 <b>SHARKMMO — DANH MỤC SẢN PHẨM</b> 💎\n"
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
-        "🔥 <i>Hệ sinh thái sản phẩm MMO & Tài khoản số tự động</i>\n"
-        "⚡ <b>Tự động giao hàng 24/7 • Bảo hành chu đáo</b>\n\n"
-        "╭───────────────────────╮\n"
-        "  📂 <b>VUI LÒNG CHỌN DANH MỤC:</b>\n"
-        "╰───────────────────────╯\n"
-        "👇 <i>Bấm chọn danh mục bên dưới để xem chi tiết:</i>"
-    )
-
-    await callback.message.edit_text(
-        banner,
-        reply_markup=get_categories_keyboard(categories),
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("cat:"))
-async def callback_select_category(callback: CallbackQuery, session: AsyncSession):
-    # e.g. cat:🤖 AI & Đồ họa (5) -> clean category name
-    raw_cat = callback.data.split("cat:", 1)[1]
-    cat_clean = raw_cat.rsplit(" (", 1)[0].strip()
-
-    await render_product_page(callback, session, page=1, category=cat_clean)
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("page:"))
-async def callback_pagination(callback: CallbackQuery, session: AsyncSession):
-    parts = callback.data.split(":")
-    page = int(parts[1])
-    category = parts[2] if len(parts) > 2 else None
-
-    await render_product_page(callback, session, page=page, category=category)
-    await callback.answer()
-
-
-@router.callback_query(F.data == "products:page:1")
-async def callback_all_products(callback: CallbackQuery, session: AsyncSession):
-    await render_product_page(callback, session, page=1, category=None)
-    await callback.answer()
-
-
-async def render_product_page(
-    callback: CallbackQuery,
+async def render_store_view(
+    event: Union[Message, CallbackQuery],
     session: AsyncSession,
-    page: int,
-    category: Optional[str] = None
+    tag: Optional[str] = None,
+    page: int = 1
 ):
+    """
+    Renders the store UI matching Image 2:
+    - Top: 3-column quick brand tags (Canva, Capcut, ChatGPT, YouTube, etc.)
+    - Middle: Full-width product buttons with {icon} {name} | {price} | 📦 {stock}
+    - Bottom: Refresh & Home / Support controls
+    """
     base_q = select(ProductCache).where(ProductCache.is_active == True)
     count_q = select(func.count(ProductCache.id)).where(ProductCache.is_active == True)
 
-    if category:
-        base_q = base_q.where(ProductCache.category == category)
-        count_q = count_q.where(ProductCache.category == category)
+    if tag:
+        pattern = f"%{tag}%"
+        cond = or_(
+            ProductCache.name.ilike(pattern),
+            ProductCache.description.ilike(pattern),
+            ProductCache.category.ilike(pattern)
+        )
+        base_q = base_q.where(cond)
+        count_q = count_q.where(cond)
 
-    total_count_res = await session.execute(count_q)
-    total_items = total_count_res.scalar() or 0
-    total_pages = max(1, math.ceil(total_items / PAGE_SIZE))
+    # In-stock products first, then highest available quantity, then most sold
+    in_stock_order = case((ProductCache.available_qty > 0, 0), else_=1)
+    base_q = base_q.order_by(
+        in_stock_order,
+        ProductCache.available_qty.desc(),
+        ProductCache.sold_qty.desc(),
+        ProductCache.id.asc()
+    )
+
+    total_count = (await session.execute(count_q)).scalar() or 0
+    total_pages = max(1, math.ceil(total_count / STORE_PAGE_SIZE))
 
     if page < 1:
         page = 1
     if page > total_pages:
         page = total_pages
 
-    offset = (page - 1) * PAGE_SIZE
-    items_q = base_q.order_by(ProductCache.id.asc()).offset(offset).limit(PAGE_SIZE)
-    items_res = await session.execute(items_q)
+    offset = (page - 1) * STORE_PAGE_SIZE
+    items_res = await session.execute(base_q.offset(offset).limit(STORE_PAGE_SIZE))
     products = items_res.scalars().all()
-
-    if not products:
-        await callback.message.edit_text(
-            f"⚠️ Không có sản phẩm nào trong mục <b>{category or 'Tất cả'}</b>.",
-            reply_markup=get_categories_keyboard([]),
-            parse_mode="HTML"
-        )
-        return
 
     prod_dicts = [
         {
@@ -153,23 +72,117 @@ async def render_product_page(
         for p in products
     ]
 
-    category_title = f"📂 {category}" if category else "🌐 TẤT CẢ SẢN PHẨM"
-    body = (
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
-        f"   🏷️ <b>{category_title}</b>\n"
-        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
-        f"📄 Trang: <b>{page}/{total_pages}</b>  •  📦 Tổng cộng: <b>{total_items}</b> sản phẩm\n\n"
-        "╭───────────────────────╮\n"
-        "  💡 <b>DANH SÁCH SẢN PHẨM:</b>\n"
-        "╰───────────────────────╯\n"
-        "👇 <i>Bấm vào sản phẩm bên dưới để xem chi tiết & mua hàng:</i>"
+    if tag:
+        banner = f"🔥 <b>Mua từ 10+ giảm 20%</b> | 🏷️ <i>{tag} ({total_count} sp)</i>"
+    else:
+        banner = "🔥 <b>Mua từ 10+ giảm 20%</b>"
+
+    kb = get_store_catalog_keyboard(
+        prod_dicts,
+        selected_tag=tag,
+        page=page,
+        total_pages=total_pages
     )
 
-    await callback.message.edit_text(
-        body,
-        reply_markup=get_products_pagination_keyboard(prod_dicts, page, total_pages, category),
-        parse_mode="HTML"
+    if isinstance(event, CallbackQuery):
+        await event.message.edit_text(banner, reply_markup=kb, parse_mode="HTML")
+        await event.answer()
+    else:
+        await event.answer(banner, reply_markup=kb, parse_mode="HTML")
+
+
+@router.message(F.text.in_(["🛍️ Mua sản phẩm", "📦 Danh mục sản phẩm"]))
+async def show_store_home(message: Message, session: AsyncSession):
+    await render_store_view(message, session, tag=None, page=1)
+
+
+@router.callback_query(F.data.startswith("tag:"))
+async def handle_tag_filter(callback: CallbackQuery, session: AsyncSession):
+    tag = callback.data.split("tag:", 1)[1]
+    await render_store_view(callback, session, tag=tag, page=1)
+
+
+@router.callback_query(F.data.startswith("spage:"))
+async def handle_store_pagination(callback: CallbackQuery, session: AsyncSession):
+    parts = callback.data.split(":")
+    page = int(parts[1])
+    tag = parts[2] if len(parts) > 2 and parts[2] else None
+    await render_store_view(callback, session, tag=tag, page=page)
+
+
+@router.callback_query(F.data == "refresh_store")
+async def handle_refresh_store(callback: CallbackQuery, session: AsyncSession):
+    await render_store_view(callback, session, tag=None, page=1)
+
+
+@router.callback_query(F.data == "home_menu")
+async def handle_home_menu(callback: CallbackQuery, session: AsyncSession):
+    # Fetch user for balance display
+    q = select(User).where(User.telegram_id == callback.from_user.id)
+    res = await session.execute(q)
+    user = res.scalars().first()
+    bal = f"{user.balance:,.0f} VND" if user else "0 VND"
+
+    first_name = callback.from_user.first_name or "Quý khách"
+    text = (
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "      🔥 <b>SHARKMMO STORE PRO</b> 🔥\n"
+        "   <i>Hệ sinh thái sản phẩm MMO tự động</i>\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        f"👋 Xin chào <b>{first_name}</b>!\n"
+        f"🆔 ID Telegram: <code>{callback.from_user.id}</code>\n"
+        f"💰 Số dư ví hiện có: <b>{bal}</b>\n\n"
+        "╭───────────────────────╮\n"
+        "  ✨ <b>DỊCH VỤ NỔI BẬT HÀNG ĐẦU:</b>\n"
+        "  ├ 🤖 <b>Tài khoản AI:</b> ChatGPT, Claude, Canva Pro\n"
+        "  ├ 📱 <b>Tài khoản MXH:</b> Facebook, TikTok, X/Twitter\n"
+        "  ├ 🛡️ <b>Mạng & Proxy:</b> Proxy IPv4/IPv6, VPN Cao cấp\n"
+        "  └ 🎬 <b>Giải trí số:</b> Netflix, Spotify, YouTube Pre\n"
+        "╰───────────────────────╯\n\n"
+        "🌟 <b>CAM KẾT DỊCH VỤ:</b>\n"
+        "⚡ <b>Giao hàng tự động:</b> Nhận hàng trong 1 giây\n"
+        "💳 <b>Nạp tiền VietQR:</b> Tự động duyệt 24/7\n"
+        "🔒 <b>Bảo hành uy tín:</b> 1 đổi 1 chu đáo\n\n"
+        "👇 <i>Sử dụng các nút menu bên dưới để bắt đầu:</i>"
     )
+    # Give a button to open store
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🛍️ Mở Cửa Hàng Sản Phẩm", callback_data="refresh_store")],
+        [InlineKeyboardButton(text="💰 Nạp Tiền Vào Ví", callback_data="dep_amt:50000"),
+         InlineKeyboardButton(text="💬 Hỗ Trợ 24/7", callback_data="support_menu")]
+    ])
+    await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "support_menu")
+async def handle_support_menu(callback: CallbackQuery):
+    text = (
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   💬 <b>TRUNG TÂM HỖ TRỢ KHÁCH HÀNG</b> 💬\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        "👋 Bạn cần hỗ trợ về đơn hàng, nạp tiền hoặc bảo hành sản phẩm?\n\n"
+        "🕒 <b>Thời gian trực hỗ trợ:</b> 08:00 — 23:30 (Hằng ngày)\n\n"
+        "╭───────────────────────╮\n"
+        "  📞 <b>KÊNH LIÊN HỆ TRỰC TIẾP:</b>\n"
+        "  • 👤 Telegram Admin: @SharkMMO_Support\n"
+        "  • 📢 Kênh thông báo: @SharkMMO_Channel\n"
+        "  • 👥 Nhóm thảo luận: @SharkMMO_Chat\n"
+        "╰───────────────────────╯\n\n"
+        "🛡️ <b>CHÍNH SÁCH BẢO HÀNH VIP:</b>\n"
+        "• <b>1 đổi 1 ngay lập tức</b> nếu tài khoản phát sinh lỗi.\n"
+        "• Hỗ trợ đổi mới hoặc hoàn tiền theo quy định bảo hành.\n"
+        "• Vui lòng gửi kèm <b>Mã đơn hàng</b> để Admin xử lý nhanh nhất.\n\n"
+        "🦈 <i>SHARKMMO — Cam kết chất lượng & uy tín hàng đầu!</i>"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🛍️ Cửa hàng", callback_data="refresh_store"),
+            InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
+        ]
+    ])
+    await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("prod:"))
@@ -190,7 +203,7 @@ async def callback_product_detail(callback: CallbackQuery, session: AsyncSession
 
     stock_text = f"🟢 Còn hàng: <b>{product.available_qty}</b> cái" if product.available_qty is not None else "🟢 Sẵn sàng cung cấp"
     if not in_stock:
-        stock_text = "🔴 <b>Hết hàng</b>"
+        stock_text = "🔴 <b>Tạm hết hàng</b>"
 
     # Promotions text
     promo_text = ""
@@ -203,7 +216,7 @@ async def callback_product_detail(callback: CallbackQuery, session: AsyncSession
                     line += f" + Tặng {promo.get('bonusQty')} cái"
                 promo_lines.append(line)
         if promo_lines:
-            promo_text = "\n🎁 <b>Ưu đãi số lượng lớn:</b>\n" + "\n".join(promo_lines)
+            promo_text = "\n🎁 <b>ƯU ĐÃI SỐ LƯỢNG LỚN:</b>\n" + "\n".join(promo_lines)
 
     desc = product.description or "Không có mô tả chi tiết."
 
