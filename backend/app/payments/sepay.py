@@ -19,8 +19,21 @@ class SePayProcessor:
         Prevents duplicate webhook processing, verifies amount and transfer memo.
         """
         gateway_id = str(payload.get("id") or "")
-        amount_in = float(payload.get("amountIn") or 0.0)
-        content = (payload.get("transactionContent") or payload.get("description") or "").strip()
+        raw_amount = (
+            payload.get("transferAmount")
+            or payload.get("amountIn")
+            or payload.get("amount_in")
+            or payload.get("amount")
+            or payload.get("transfer_amount")
+            or 0.0
+        )
+        amount_in = float(raw_amount)
+        content = (
+            payload.get("content")
+            or payload.get("transactionContent")
+            or payload.get("description")
+            or ""
+        ).strip()
         account_number = payload.get("accountNumber", "")
 
         logger.info(f"Incoming SePay webhook: ID={gateway_id}, Amount={amount_in}, Content='{content}'")
