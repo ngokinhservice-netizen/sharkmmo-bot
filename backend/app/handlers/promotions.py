@@ -31,13 +31,18 @@ async def show_promotions(message: Message, session: AsyncSession):
 
     if not promo_list:
         promo_text = (
-            "🎁 <b>CHƯƠNG TRÌNH KHUYẾN MÃI SHARKMMO</b>\n\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+            "   🎁 <b>CHƯƠNG TRÌNH KHUYẾN MÃI</b> 🎁\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
             "Hiện tại chưa có chương trình giảm giá tự động nào đang chạy.\n"
-            "Hãy theo dõi kênh thông báo để không bỏ lỡ các đợt Flash Sale nhé!"
+            "Hãy theo dõi kênh thông báo để không bỏ lỡ các đợt Flash Sale nhé!\n\n"
+            "📢 <i>Kênh săn deal: @SharkMMO_Channel</i>"
         )
     else:
         promo_text = (
-            "🎁 <b>CHƯƠNG TRÌNH ƯU ĐÃI & KHUYẾN MÃI SỈ SHARKMMO:</b>\n\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+            "   🎁 <b>ƯU ĐÃI & CHIẾT KHẤU MUA SỈ</b> 🎁\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
             + "\n".join(promo_list)
             + "\n💡 <i>Mức chiết khấu sẽ được tự động áp dụng trực tiếp khi bạn chọn số lượng tương ứng!</i>"
         )

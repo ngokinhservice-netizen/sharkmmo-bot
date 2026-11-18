@@ -9,7 +9,7 @@ from aiogram.types import (
 
 def get_main_menu() -> ReplyKeyboardMarkup:
     """
-    Standard Vietnamese 8-button menu according to section 5:
+    Standard Vietnamese 8-button menu with modern styling:
     - 🛍️ Mua sản phẩm
     - 📦 Danh mục sản phẩm
     - 🔎 Tìm kiếm
@@ -42,9 +42,19 @@ def get_main_menu() -> ReplyKeyboardMarkup:
 
 def get_categories_keyboard(categories: List[str]) -> InlineKeyboardMarkup:
     buttons = []
+    # 2 columns per row for a clean modern app grid
+    row = []
     for cat in categories:
-        buttons.append([InlineKeyboardButton(text=cat, callback_data=f"cat:{cat}")])
-    buttons.append([InlineKeyboardButton(text="🔍 Xem tất cả sản phẩm", callback_data="products:page:1")])
+        row.append(InlineKeyboardButton(text=f"{cat}", callback_data=f"cat:{cat}"))
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+
+    buttons.append([
+        InlineKeyboardButton(text="🔍 Xem tất cả sản phẩm (Kho hàng)", callback_data="products:page:1")
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -56,9 +66,10 @@ def get_products_pagination_keyboard(
 ) -> InlineKeyboardMarkup:
     buttons = []
     for p in products:
-        stock_badge = f"({p['available_qty']} còn)" if p.get("available_qty") is not None else "(Sẵn có)"
+        stock_badge = f"{p['available_qty']} còn" if p.get("available_qty") is not None else "Sẵn có"
         price_text = f"{p['calculated_price']:,.0f}đ"
-        btn_text = f"{p['name'][:24]} | {price_text} {stock_badge}"
+        name_short = p['name'][:22].strip()
+        btn_text = f"🔹 {name_short} | {price_text} ({stock_badge})"
         buttons.append([
             InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
         ])
@@ -68,21 +79,21 @@ def get_products_pagination_keyboard(
     cat_param = f":{category}" if category else ""
     if page > 1:
         nav_row.append(
-            InlineKeyboardButton(text="⬅️ Trước", callback_data=f"page:{page - 1}{cat_param}")
+            InlineKeyboardButton(text="◀️ Trước", callback_data=f"page:{page - 1}{cat_param}")
         )
     nav_row.append(
         InlineKeyboardButton(text=f"Trang {page}/{total_pages}", callback_data="noop")
     )
     if page < total_pages:
         nav_row.append(
-            InlineKeyboardButton(text="Sau ➡️", callback_data=f"page:{page + 1}{cat_param}")
+            InlineKeyboardButton(text="Sau ▶️", callback_data=f"page:{page + 1}{cat_param}")
         )
     if nav_row:
         buttons.append(nav_row)
 
     # Return button
     buttons.append([
-        InlineKeyboardButton(text="📦 Về danh mục", callback_data="categories")
+        InlineKeyboardButton(text="📂 Về danh mục chính", callback_data="categories")
     ])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -92,14 +103,15 @@ def get_product_detail_keyboard(product_id: str, is_available: bool = True) -> I
     buttons = []
     if is_available:
         buttons.append([
-            InlineKeyboardButton(text="⚡ MUA NGAY", callback_data=f"buy:{product_id}")
+            InlineKeyboardButton(text="⚡ MUA NGAY (Giao tức thì)", callback_data=f"buy:{product_id}")
         ])
     else:
         buttons.append([
             InlineKeyboardButton(text="⚠️ Tạm hết hàng", callback_data="noop")
         ])
     buttons.append([
-        InlineKeyboardButton(text="🔙 Danh sách sản phẩm", callback_data="products:page:1")
+        InlineKeyboardButton(text="🔙 Danh sách sản phẩm", callback_data="products:page:1"),
+        InlineKeyboardButton(text="📂 Danh mục", callback_data="categories")
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -108,10 +120,10 @@ def get_quantity_keyboard(product_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="1", callback_data=f"qty:{product_id}:1"),
-                InlineKeyboardButton(text="2", callback_data=f"qty:{product_id}:2"),
-                InlineKeyboardButton(text="5", callback_data=f"qty:{product_id}:5"),
-                InlineKeyboardButton(text="10", callback_data=f"qty:{product_id}:10")
+                InlineKeyboardButton(text="1 Cái", callback_data=f"qty:{product_id}:1"),
+                InlineKeyboardButton(text="2 Cái", callback_data=f"qty:{product_id}:2"),
+                InlineKeyboardButton(text="5 Cái", callback_data=f"qty:{product_id}:5"),
+                InlineKeyboardButton(text="10 Cái", callback_data=f"qty:{product_id}:10")
             ],
             [
                 InlineKeyboardButton(text="❌ Hủy bỏ", callback_data=f"prod:{product_id}")
@@ -124,7 +136,7 @@ def get_slot_months_keyboard(product_id: str, allowed_months: List[int]) -> Inli
     rows = []
     current_row = []
     for m in allowed_months:
-        current_row.append(InlineKeyboardButton(text=f"{m} Tháng", callback_data=f"month:{product_id}:{m}"))
+        current_row.append(InlineKeyboardButton(text=f"⏱️ {m} Tháng", callback_data=f"month:{product_id}:{m}"))
         if len(current_row) == 2:
             rows.append(current_row)
             current_row = []
@@ -139,8 +151,10 @@ def get_confirm_purchase_keyboard(product_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ XÁC NHẬN MUA", callback_data="confirm_buy_yes"),
-                InlineKeyboardButton(text="❌ HỦY", callback_data="confirm_buy_no")
+                InlineKeyboardButton(text="✅ XÁC NHẬN MUA NGAY", callback_data="confirm_buy_yes")
+            ],
+            [
+                InlineKeyboardButton(text="❌ HỦY BỎ GIAO DỊCH", callback_data="confirm_buy_no")
             ]
         ]
     )
@@ -150,19 +164,19 @@ def get_deposit_amounts_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="20.000đ", callback_data="dep_amt:20000"),
-                InlineKeyboardButton(text="50.000đ", callback_data="dep_amt:50000")
+                InlineKeyboardButton(text="💳 20.000 VND", callback_data="dep_amt:20000"),
+                InlineKeyboardButton(text="💳 50.000 VND", callback_data="dep_amt:50000")
             ],
             [
-                InlineKeyboardButton(text="100.000đ", callback_data="dep_amt:100000"),
-                InlineKeyboardButton(text="200.000đ", callback_data="dep_amt:200000")
+                InlineKeyboardButton(text="💳 100.000 VND", callback_data="dep_amt:100000"),
+                InlineKeyboardButton(text="💳 200.000 VND", callback_data="dep_amt:200000")
             ],
             [
-                InlineKeyboardButton(text="500.000đ", callback_data="dep_amt:500000"),
-                InlineKeyboardButton(text="1.000.000đ", callback_data="dep_amt:1000000")
+                InlineKeyboardButton(text="💳 500.000 VND", callback_data="dep_amt:500000"),
+                InlineKeyboardButton(text="💎 1.000.000 VND", callback_data="dep_amt:1000000")
             ],
             [
-                InlineKeyboardButton(text="✏️ Nhập số tiền khác", callback_data="dep_amt:custom")
+                InlineKeyboardButton(text="✏️ Nhập số tiền tùy ý khác", callback_data="dep_amt:custom")
             ]
         ]
     )

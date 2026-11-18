@@ -21,31 +21,37 @@ async def show_order_history(message: Message, current_user: User, session: Asyn
 
     if not orders:
         await message.answer(
-            "🧾 <b>LỊCH SỬ ĐƠN HÀNG TRỐNG</b>\n\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+            "   🧾 <b>LỊCH SỬ ĐƠN HÀNG TRỐNG</b> 🧾\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
             "Bạn chưa mua sản phẩm nào tại SHARKMMO.\n"
-            "👉 Hãy nhấn <b>🛍️ Mua sản phẩm</b> để trải nghiệm dịch vụ ngay nhé!",
+            "👉 Hãy nhấn <b>🛍️ Mua sản phẩm</b> để trải nghiệm giao hàng tự động ngay nhé!",
             parse_mode="HTML"
         )
         return
 
     buttons = []
-    text_lines = ["🧾 <b>LỊCH SỬ 10 ĐƠN HÀNG GẦN NHẤT:</b>\n"]
+    text_lines = [
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   🧾 <b>LỊCH SỬ ĐƠN HÀNG GẦN ĐÂY</b> 🧾\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+    ]
 
     for ord in orders:
-        st_icon = "🟢 Hoàn thành" if ord.status == "completed" else ("🔴 Thất bại" if ord.status == "failed" else "⏳ Đang xử lý")
-        date_str = ord.created_at.strftime("%d/%m/%Y %H:%M") if ord.created_at else ""
-        text_lines.append(f"• <b>{ord.order_code}</b> | {ord.product_name} x{ord.quantity} | {ord.sell_price:,.0f}đ ({st_icon})")
+        st_icon = "🟢 Thành công" if ord.status == "completed" else ("🔴 Thất bại" if ord.status == "failed" else "⏳ Đang xử lý")
+        date_str = ord.created_at.strftime("%d/%m %H:%M") if ord.created_at else ""
+        text_lines.append(f"• <code>{ord.order_code}</code> | <b>{ord.product_name}</b> x{ord.quantity}\n  💵 {ord.sell_price:,.0f} VND — {st_icon} ({date_str})")
 
         if ord.status == "completed" and ord.delivery_data:
             buttons.append([
                 InlineKeyboardButton(
-                    text=f"📦 Xem TK: {ord.order_code} ({ord.product_name[:16]})",
+                    text=f"🔑 Xem tài khoản: {ord.order_code}",
                     callback_data=f"view_ord:{ord.id}"
                 )
             ])
 
     text = "\n".join(text_lines)
-    text += "\n\n<i>Nhấn vào nút bên dưới để xem lại thông tin tài khoản đã nhận:</i>"
+    text += "\n\n<i>👇 Nhấn vào nút bên dưới để xem lại thông tin tài khoản đã nhận:</i>"
 
     await message.answer(
         text=text,

@@ -19,8 +19,11 @@ class SearchState(StatesGroup):
 async def start_search(message: Message, state: FSMContext):
     await state.set_state(SearchState.waiting_for_keyword)
     await message.answer(
-        "🔎 <b>TÌM KIẾM SẢN PHẨM SHARKMMO</b>\n\n"
-        "Vui lòng nhập tên sản phẩm, từ khóa cần tìm (Ví dụ: <i>ChatGPT, Netflix, Proxy, Facebook...</i>):",
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   🔎 <b>TÌM KIẾM SẢN PHẨM NHANH</b> 🔎\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        "Nhập tên sản phẩm hoặc từ khóa bạn cần tìm:\n"
+        "💡 <i>Gợi ý: ChatGPT, Netflix, Proxy, Facebook, Canva, Spotify...</i>",
         parse_mode="HTML"
     )
 

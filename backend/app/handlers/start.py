@@ -8,33 +8,30 @@ from backend.app.keyboards.menus import get_main_menu, get_categories_keyboard
 
 router = Router(name="start")
 
-START_BANNER = """
-🦈 <b>CHÀO MỪNG ĐẾN VỚI SHARKMMO</b> 🦈
-<i>"Hệ sinh thái sản phẩm MMO tự động"</i>
-
-🔥 <b>Nền tảng cung cấp tài khoản & công cụ số hàng đầu:</b>
-• 🤖 <b>Tài khoản AI:</b> ChatGPT Plus, OpenAI, Claude, Midjourney, Canva Pro
-• 📱 <b>Tài khoản MXH:</b> Facebook, TikTok, Instagram, Twitter/X
-• 🛡️ <b>Bảo mật & Proxy:</b> Proxy IPv4/IPv6, VPN cao cấp
-• 🎬 <b>Giải trí số:</b> Netflix, Spotify, YouTube Premium
-
-✨ <b>Ưu điểm vượt trội:</b>
-⚡ Nhận tài khoản tự động ngay sau khi thanh toán
-💳 Hỗ trợ nạp tiền tự động qua QR Ngân hàng 24/7
-🔒 Bảo hành chu đáo, đối soát minh bạch
-
-👉 <i>Vui lòng chọn tính năng bên dưới để bắt đầu:</i>
-"""
-
-
 @router.message(CommandStart())
 async def handle_start(message: Message, current_user: User):
     first_name = message.from_user.first_name or "Quý khách"
-    balance_text = f"{current_user.balance:,.0f}đ"
+    balance_text = f"{current_user.balance:,.0f} VND"
     text = (
-        f"Xin chào <b>{first_name}</b>!\n"
-        f"💰 Số dư ví của bạn: <b>{balance_text}</b>\n\n"
-        f"{START_BANNER}"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "      🔥 <b>SHARKMMO STORE PRO</b> 🔥\n"
+        "   <i>Hệ sinh thái sản phẩm MMO tự động</i>\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        f"👋 Xin chào <b>{first_name}</b>!\n"
+        f"🆔 ID Telegram: <code>{current_user.telegram_id}</code>\n"
+        f"💰 Số dư ví hiện có: <b>{balance_text}</b>\n\n"
+        "╭───────────────────────╮\n"
+        "  ✨ <b>DỊCH VỤ NỔI BẬT HÀNG ĐẦU:</b>\n"
+        "  ├ 🤖 <b>Tài khoản AI:</b> ChatGPT, Claude, Canva Pro\n"
+        "  ├ 📱 <b>Tài khoản MXH:</b> Facebook, TikTok, X/Twitter\n"
+        "  ├ 🛡️ <b>Mạng & Proxy:</b> Proxy IPv4/IPv6, VPN Cao cấp\n"
+        "  └ 🎬 <b>Giải trí số:</b> Netflix, Spotify, YouTube Pre\n"
+        "╰───────────────────────╯\n\n"
+        "🌟 <b>CAM KẾT DỊCH VỤ:</b>\n"
+        "⚡ <b>Giao hàng tự động:</b> Nhận hàng trong 1 giây\n"
+        "💳 <b>Nạp tiền VietQR:</b> Tự động duyệt 24/7\n"
+        "🔒 <b>Bảo hành uy tín:</b> 1 đổi 1 chu đáo\n\n"
+        "👇 <i>Sử dụng các nút menu bên dưới để bắt đầu:</i>"
     )
     await message.answer(
         text=text,

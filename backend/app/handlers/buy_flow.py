@@ -265,43 +265,49 @@ async def show_order_confirmation(
     if balance < total_price:
         missing = total_price - balance
         text = (
-            f"🦈 <b>XÁC NHẬN ĐƠN HÀNG — SỐ DƯ KHÔNG ĐỦ</b>\n\n"
-            f"📦 Sản phẩm: <b>{product_name}</b>\n"
-            f"🔢 Số lượng: <b>{quantity}</b>\n"
-            f"💰 Đơn giá: <b>{unit_price:,.0f} VND</b>\n"
-            f"💳 <b>Tổng tiền cần thanh toán:</b> <b>{total_price:,.0f} VND</b>"
-            f"{extra_str}\n"
-            f"────────────────────\n"
-            f"👛 Số dư ví hiện tại: <b>{balance:,.0f} VND</b>\n"
-            f"⚠️ <b>Bạn còn thiếu:</b> <b>{missing:,.0f} VND</b>\n\n"
-            f"👉 <i>Vui lòng nạp thêm tiền vào ví để hoàn tất giao dịch:</i>"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+            "   ⚠️ <b>XÁC NHẬN ĐƠN — SỐ DƯ THIẾU</b> ⚠️\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+            f"📦 <b>Sản phẩm:</b> <b>{product_name}</b>\n"
+            f"🔢 <b>Số lượng:</b> <b>{quantity}</b>\n"
+            f"💰 <b>Đơn giá:</b> <b>{unit_price:,.0f} VND</b>\n\n"
+            "╭───────────────────────╮\n"
+            f"  💳 <b>TỔNG CẦN TRẢ:</b> <b>{total_price:,.0f} VND</b>\n"
+            f"  👛 <b>Số dư hiện tại:</b> <b>{balance:,.0f} VND</b>\n"
+            f"  🔴 <b>Còn thiếu:</b> <b>{missing:,.0f} VND</b>\n"
+            "╰───────────────────────╯"
+            f"{extra_str}\n\n"
+            "👇 <i>Bấm nạp tiền bên dưới để tạo mã QR nạp đúng số tiền còn thiếu:</i>"
         )
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text=f"💳 Nạp ngay {missing:,.0f}đ",
+                        text=f"💳 Nạp ngay {missing:,.0f} VND",
                         callback_data=f"dep_amt:{int(missing)}"
                     )
                 ],
                 [
-                    InlineKeyboardButton(text="❌ Hủy bỏ", callback_data="confirm_buy_no")
+                    InlineKeyboardButton(text="❌ Hủy bỏ giao dịch", callback_data="confirm_buy_no")
                 ]
             ]
         )
     else:
         rem_balance = balance - total_price
         text = (
-            f"🦈 <b>XÁC NHẬN MUA HÀNG</b>\n\n"
-            f"📦 Sản phẩm: <b>{product_name}</b>\n"
-            f"🔢 Số lượng: <b>{quantity}</b>\n"
-            f"💰 Đơn giá: <b>{unit_price:,.0f} VND</b>\n"
-            f"💳 <b>Tổng thanh toán:</b> <b>{total_price:,.0f} VND</b>"
-            f"{extra_str}\n"
-            f"────────────────────\n"
-            f"👛 Số dư ví hiện tại: <b>{balance:,.0f} VND</b>\n"
-            f"💵 Số dư còn lại sau mua: <b>{rem_balance:,.0f} VND</b>\n\n"
-            f"⚡ <i>Nhấn 'Xác nhận mua' để hệ thống tự động xuất tài khoản ngay lập tức!</i>"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+            "     🛒 <b>XÁC NHẬN MUA HÀNG</b> 🛒\n"
+            "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+            f"📦 <b>Sản phẩm:</b> <b>{product_name}</b>\n"
+            f"🔢 <b>Số lượng:</b> <b>{quantity}</b>\n"
+            f"💰 <b>Đơn giá:</b> <b>{unit_price:,.0f} VND</b>\n\n"
+            "╭───────────────────────╮\n"
+            f"  💳 <b>TỔNG THANH TOÁN:</b> <b>{total_price:,.0f} VND</b>\n"
+            f"  👛 <b>Số dư hiện tại:</b> <b>{balance:,.0f} VND</b>\n"
+            f"  💵 <b>Số dư còn lại:</b> <b>{rem_balance:,.0f} VND</b>\n"
+            "╰───────────────────────╯"
+            f"{extra_str}\n\n"
+            "⚡ <i>Nhấn nút bên dưới để hệ thống xuất tài khoản tự động ngay lập tức!</i>"
         )
         kb = get_confirm_purchase_keyboard(product_id)
 
@@ -366,17 +372,18 @@ async def handle_confirm_buy_yes(
             acc_text += f"• Ghi chú: <code>{oth}</code>\n"
 
     success_msg = (
-        f"🎉 <b>MUA HÀNG THÀNH CÔNG!</b> 🎉\n\n"
-        f"🦈 Đơn vị cung cấp: <b>SHARKMMO</b>\n"
-        f"🆔 Mã đơn hàng: <code>{res['order_code']}</code>\n"
-        f"📦 Sản phẩm: <b>{res['product_name']}</b> (x{res['quantity']})\n"
-        f"💰 Đã thanh toán: <b>{res['sell_price']:,.0f} VND</b>\n"
-        f"👛 Số dư còn lại: <b>{res['user_balance']:,.0f} VND</b>\n"
-        f"────────────────────\n"
-        f"<b>🔐 THÔNG TIN BÀN GIAO:</b>\n"
-        f"{acc_text or '<i>(Đơn hàng dạng kích hoạt theo email/slot. Vui lòng kiểm tra email của bạn hoặc lịch sử đơn hàng)</i>'}\n"
-        f"────────────────────\n"
-        f"🛡️ <i>Đơn hàng được bảo hành theo đúng quy định. Nhấn vào mã đơn để sao chép khi cần hỗ trợ.</i>"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   🎉 <b>GIAO DỊCH THÀNH CÔNG!</b> 🎉\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        f"🆔 <b>Mã đơn hàng:</b> <code>{res['order_code']}</code>\n"
+        f"📦 <b>Sản phẩm:</b> <b>{res['product_name']}</b> (x{res['quantity']})\n"
+        f"💰 <b>Đã thanh toán:</b> <b>{res['sell_price']:,.0f} VND</b>\n"
+        f"👛 <b>Số dư còn lại:</b> <b>{res['user_balance']:,.0f} VND</b>\n\n"
+        "╭───────────────────────╮\n"
+        "  🔐 <b>THÔNG TIN TÀI KHOẢN BÀN GIAO:</b>\n"
+        "╰───────────────────────╯"
+        f"{acc_text or '\n<i>(Đơn hàng kích hoạt theo email/slot. Vui lòng kiểm tra email của bạn hoặc mục Lịch sử đơn hàng)</i>'}\n\n"
+        "🛡️ <i>Đơn hàng được bảo hành 1 đổi 1. Bấm vào mã đơn hàng để sao chép khi cần hỗ trợ!</i>"
     )
 
     await callback.message.edit_text(success_msg, parse_mode="HTML")

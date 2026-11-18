@@ -33,8 +33,20 @@ async def show_categories(message: Message, session: AsyncSession):
         )
         return
 
+    banner = (
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "      💎 <b>SHARKMMO — DANH MỤC SẢN PHẨM</b> 💎\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        "🔥 <i>Hệ sinh thái sản phẩm MMO & Tài khoản số tự động</i>\n"
+        "⚡ <b>Tự động giao hàng 24/7 • Bảo hành chu đáo</b>\n\n"
+        "╭───────────────────────╮\n"
+        "  📂 <b>VUI LÒNG CHỌN DANH MỤC:</b>\n"
+        "╰───────────────────────╯\n"
+        "👇 <i>Bấm chọn danh mục bên dưới để xem chi tiết:</i>"
+    )
+
     await message.answer(
-        "📂 <b>DANH MỤC SẢN PHẨM SHARKMMO</b>\n<i>Vui lòng chọn danh mục bạn muốn xem:</i>",
+        banner,
         reply_markup=get_categories_keyboard(categories),
         parse_mode="HTML"
     )
@@ -50,8 +62,20 @@ async def callback_categories(callback: CallbackQuery, session: AsyncSession):
     res = await session.execute(query)
     categories = [f"{cat} ({count})" for cat, count in res.all()]
 
+    banner = (
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "      💎 <b>SHARKMMO — DANH MỤC SẢN PHẨM</b> 💎\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        "🔥 <i>Hệ sinh thái sản phẩm MMO & Tài khoản số tự động</i>\n"
+        "⚡ <b>Tự động giao hàng 24/7 • Bảo hành chu đáo</b>\n\n"
+        "╭───────────────────────╮\n"
+        "  📂 <b>VUI LÒNG CHỌN DANH MỤC:</b>\n"
+        "╰───────────────────────╯\n"
+        "👇 <i>Bấm chọn danh mục bên dưới để xem chi tiết:</i>"
+    )
+
     await callback.message.edit_text(
-        "📂 <b>DANH MỤC SẢN PHẨM SHARKMMO</b>\n<i>Vui lòng chọn danh mục bạn muốn xem:</i>",
+        banner,
         reply_markup=get_categories_keyboard(categories),
         parse_mode="HTML"
     )
@@ -129,11 +153,16 @@ async def render_product_page(
         for p in products
     ]
 
-    title = f"🏷️ <b>DANH SÁCH SẢN PHẨM {f'— {category}' if category else ''}</b>"
+    category_title = f"📂 {category}" if category else "🌐 TẤT CẢ SẢN PHẨM"
     body = (
-        f"{title}\n"
-        f"📄 Trang <b>{page}/{total_pages}</b> (Tổng <b>{total_items}</b> sản phẩm)\n\n"
-        f"<i>Nhấn vào sản phẩm bên dưới để xem chi tiết & mua hàng:</i>"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        f"   🏷️ <b>{category_title}</b>\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        f"📄 Trang: <b>{page}/{total_pages}</b>  •  📦 Tổng cộng: <b>{total_items}</b> sản phẩm\n\n"
+        "╭───────────────────────╮\n"
+        "  💡 <b>DANH SÁCH SẢN PHẨM:</b>\n"
+        "╰───────────────────────╯\n"
+        "👇 <i>Bấm vào sản phẩm bên dưới để xem chi tiết & mua hàng:</i>"
     )
 
     await callback.message.edit_text(
@@ -179,17 +208,21 @@ async def callback_product_detail(callback: CallbackQuery, session: AsyncSession
     desc = product.description or "Không có mô tả chi tiết."
 
     card_text = (
-        f"🦈 <b>{product.name}</b>\n\n"
-        f"🆔 <b>Mã SP:</b> <code>{product.product_id}</code>\n"
-        f"📦 <b>Loại SP:</b> <code>{product.product_type}</code>\n"
-        f"📂 <b>Danh mục:</b> {product.category}\n"
-        f"💰 <b>Giá bán:</b> <b>{product.calculated_price:,.0f} VND</b>\n"
-        f"📊 <b>Trạng thái:</b> {stock_text}\n"
-        f"🔥 <b>Đã bán:</b> {product.sold_qty}\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "       💎 <b>CHI TIẾT SẢN PHẨM</b> 💎\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        f"📌 <b>Tên sản phẩm:</b> <b>{product.name}</b>\n"
+        f"📂 <b>Danh mục:</b> <code>{product.category}</code>\n"
+        f"🆔 <b>Mã sản phẩm:</b> <code>{product.product_id}</code>\n\n"
+        "╭───────────────────────╮\n"
+        f"  💰 <b>ĐƠN GIÁ:</b> <b>{product.calculated_price:,.0f} VND</b>\n"
+        f"  📊 <b>TRẠNG THÁI:</b> {stock_text}\n"
+        f"  🔥 <b>ĐÃ BÁN:</b> <b>{product.sold_qty}</b> lượt\n"
+        "╰───────────────────────╯"
         f"{promo_text}\n\n"
-        f"📝 <b>Mô tả sản phẩm:</b>\n"
+        "📝 <b>MÔ TẢ SẢN PHẨM:</b>\n"
         f"<i>{desc}</i>\n\n"
-        f"⚡ <i>Hệ thống giao tài khoản tự động ngay sau khi xác nhận thanh toán!</i>"
+        "⚡ <i>Hệ thống tự động giao hàng tức thì sau khi xác nhận thanh toán!</i>"
     )
 
     await callback.message.edit_text(

@@ -41,14 +41,19 @@ async def show_wallet(message: Message, current_user: User, session: AsyncSessio
         tx_history_text = "\n\n📋 <b>Lịch sử nạp gần đây:</b>\n" + "\n".join(lines)
 
     text = (
-        f"💳 <b>VÍ ĐIỆN TỬ SHARKMMO</b>\n\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "      💳 <b>VÍ ĐIỆN TỬ SHARKMMO</b> 💳\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
         f"👤 Chủ tài khoản: <b>{message.from_user.full_name}</b>\n"
-        f"🆔 Telegram ID: <code>{current_user.telegram_id}</code>\n"
-        f"💰 Số dư khả dụng: <b>{current_user.balance:,.0f} VND</b>\n"
-        f"💸 Tổng đã chi tiêu: <b>{current_user.total_spent:,.0f} VND</b>\n"
-        f"📦 Đơn hàng đã mua: <b>{current_user.total_orders} đơn</b>"
+        f"🆔 ID Telegram: <code>{current_user.telegram_id}</code>\n\n"
+        "╭───────────────────────╮\n"
+        f"  💰 <b>SỐ DƯ KHẢ DỤNG:</b> <b>{current_user.balance:,.0f} VND</b>\n"
+        f"  💸 <b>Tổng chi tiêu:</b> <b>{current_user.total_spent:,.0f} VND</b>\n"
+        f"  📦 <b>Đơn hàng đã mua:</b> <b>{current_user.total_orders}</b> đơn\n"
+        "╰───────────────────────╯"
         f"{tx_history_text}\n\n"
-        f"⚡ <i>Chọn mệnh giá nạp tiền bên dưới để tạo mã QR chuyển khoản tự động:</i>"
+        "⚡ <i>Hệ thống quét ngân hàng tự động cộng tiền trong 10-30 giây!</i>\n"
+        "👇 <b>Chọn nhanh mệnh giá nạp tiền bên dưới:</b>"
     )
 
     await message.answer(
@@ -125,15 +130,21 @@ async def generate_and_send_qr(
     acc_name = dep_res["account_name"]
 
     caption = (
-        f"🏦 <b>THÔNG TIN CHUYỂN KHOẢN NẠP TIỀN</b>\n\n"
-        f"💳 Ngân hàng: <b>{bank_code}</b>\n"
-        f"🔢 Số tài khoản: <code>{acc_no}</code>\n"
-        f"👤 Chủ tài khoản: <b>{acc_name}</b>\n"
-        f"💰 Số tiền: <b>{amount:,.0f} VND</b>\n"
-        f"📝 Nội dung CK: <code>{content}</code>\n\n"
-        f"⚠️ <b>LƯU Ý QUAN TRỌNG:</b>\n"
-        f"1. Quét mã QR hoặc sao chép <b>CHÍNH XÁC nội dung chuyển khoản</b> để hệ thống cộng tiền tự động trong 10-30 giây.\n"
-        f"2. Mã giao dịch: <code>{tx_code}</code>"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   ⚡ <b>HOÁ ĐƠN NẠP TIỀN VIETQR</b> ⚡\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        f"💰 <b>Số tiền nạp:</b> <b>{amount:,.0f} VND</b>\n"
+        f"🏦 <b>Ngân hàng:</b> <b>{bank_code} (VPBank)</b>\n"
+        f"💳 <b>Số tài khoản:</b> <code>{acc_no}</code>\n"
+        f"👤 <b>Chủ tài khoản:</b> <b>{acc_name}</b>\n"
+        f"📝 <b>Nội dung CK:</b> <code>{content}</code>\n\n"
+        "╭───────────────────────╮\n"
+        "  ⚠️ <b>LƯU Ý QUAN TRỌNG:</b>\n"
+        "  • Quét mã QR hoặc nhập đúng <b>Nội dung CK</b> ở trên.\n"
+        "  • Tiền sẽ cộng tự động trong <b>10 - 30 giây</b>!\n"
+        f"  • Mã giao dịch: <code>{tx_code}</code>\n"
+        "╰───────────────────────╯\n\n"
+        "👇 <i>Chuyển khoản xong, nhấn nút kiểm tra bên dưới:</i>"
     )
 
     action_kb = get_deposit_action_keyboard(dep_res["transaction_id"])

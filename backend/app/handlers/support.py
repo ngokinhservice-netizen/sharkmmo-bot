@@ -7,18 +7,22 @@ router = Router(name="support")
 @router.message(F.text == "💬 Hỗ trợ")
 async def show_support(message: Message):
     text = (
-        f"💬 <b>TRUNG TÂM HỖ TRỢ KHÁCH HÀNG SHARKMMO</b>\n\n"
-        f"Bạn cần trợ giúp về đơn hàng, nạp tiền hoặc bảo hành sản phẩm?\n\n"
-        f"🕒 <b>Thời gian làm việc:</b> 08:00 — 23:30 hàng ngày\n\n"
-        f"📞 <b>Kênh liên hệ hỗ trợ trực tiếp:</b>\n"
-        f"• Telegram Admin: @SharkMMO_Support\n"
-        f"• Kênh thông báo: @SharkMMO_Channel\n"
-        f"• Nhóm cộng đồng: @SharkMMO_Chat\n\n"
-        f"🛡️ <b>CHÍNH SÁCH BẢO HÀNH:</b>\n"
-        f"1. Bảo hành 1 đổi 1 hoặc hoàn tiền 100% nếu tài khoản lỗi ngay sau khi nhận.\n"
-        f"2. Không bảo hành các trường hợp vi phạm chính sách của nhà cung cấp (đổi mật khẩu, chia sẻ trái phép).\n"
-        f"3. Khi cần bảo hành, vui lòng gửi kèm <b>Mã đơn hàng (SHARK-...)</b> để được xử lý nhanh nhất.\n\n"
-        f"🦈 <i>SHARKMMO — Cam kết chất lượng & uy tín hàng đầu!</i>"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
+        "   💬 <b>TRUNG TÂM HỖ TRỢ KHÁCH HÀNG</b> 💬\n"
+        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
+        "👋 Bạn cần hỗ trợ về đơn hàng, nạp tiền hoặc bảo hành sản phẩm?\n\n"
+        "🕒 <b>Thời gian trực hỗ trợ:</b> 08:00 — 23:30 (Hằng ngày)\n\n"
+        "╭───────────────────────╮\n"
+        "  📞 <b>KÊNH LIÊN HỆ TRỰC TIẾP:</b>\n"
+        "  • 👤 Telegram Admin: @SharkMMO_Support\n"
+        "  • 📢 Kênh thông báo: @SharkMMO_Channel\n"
+        "  • 👥 Nhóm thảo luận: @SharkMMO_Chat\n"
+        "╰───────────────────────╯\n\n"
+        "🛡️ <b>CHÍNH SÁCH BẢO HÀNH VIP:</b>\n"
+        "• <b>1 đổi 1 ngay lập tức</b> nếu tài khoản phát sinh lỗi.\n"
+        "• Hỗ trợ đổi mới hoặc hoàn tiền theo quy định bảo hành.\n"
+        "• Vui lòng gửi kèm <b>Mã đơn hàng</b> để Admin xử lý nhanh nhất.\n\n"
+        "🦈 <i>SHARKMMO — Cam kết chất lượng & uy tín hàng đầu!</i>"
     )
 
     await message.answer(text, parse_mode="HTML")
