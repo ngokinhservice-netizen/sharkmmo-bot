@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from sqlalchemy import select
@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.models import User, PaymentTransaction
 from backend.app.payments.payment_service import payment_service
+from backend.app.payments.vietqr import get_vietqr_png_bytes
 from backend.app.keyboards.menus import (
     get_deposit_amounts_keyboard,
     get_deposit_action_keyboard
@@ -119,7 +120,6 @@ async def generate_and_send_qr(
 
     tx_code = dep_res["transaction_code"]
     content = dep_res["transfer_content"]
-    qr_url = dep_res["qr_url"]
     bank_code = dep_res["bank_code"]
     acc_no = dep_res["account_number"]
     acc_name = dep_res["account_name"]
@@ -136,12 +136,31 @@ async def generate_and_send_qr(
         f"2. Mã giao dịch: <code>{tx_code}</code>"
     )
 
-    await target_msg.answer_photo(
-        photo=qr_url,
-        caption=caption,
-        reply_markup=get_deposit_action_keyboard(dep_res["transaction_id"]),
-        parse_mode="HTML"
+    action_kb = get_deposit_action_keyboard(dep_res["transaction_id"])
+
+    # Fetch PNG bytes directly from VietQR API v2
+    qr_bytes = await get_vietqr_png_bytes(
+        amount=amount,
+        transfer_content=content,
+        bank_code=bank_code,
+        account_no=acc_no,
+        account_name=acc_name
     )
+
+    if qr_bytes:
+        photo_file = BufferedInputFile(qr_bytes, filename=f"vietqr_{tx_code}.png")
+        await target_msg.answer_photo(
+            photo=photo_file,
+            caption=caption,
+            reply_markup=action_kb,
+            parse_mode="HTML"
+        )
+    else:
+        await target_msg.answer(
+            text=caption,
+            reply_markup=action_kb,
+            parse_mode="HTML"
+        )
 
 
 @router.callback_query(F.data.startswith("check_dep:"))
