@@ -67,6 +67,7 @@ async def sync_canboso_products(session: AsyncSession, force_refresh: bool = Tru
             db_product.promotions = promotions
             db_product.purchase_requirements = reqs
             db_product.last_synced_at = now
+            db_product.is_active = True
 
             # Recalculate price
             calc_price, _ = await pricing_engine.calculate_product_price(session, db_product)
@@ -100,8 +101,19 @@ async def sync_canboso_products(session: AsyncSession, force_refresh: bool = Tru
             db_product.calculated_price = calc_price
             added_count += 1
 
+    # Deactivate products not in current shop API
+    synced_product_ids = [item.productId for item in response.products]
+    if synced_product_ids:
+        from sqlalchemy import update
+        deact_stmt = (
+            update(ProductCache)
+            .where(ProductCache.product_id.not_in(synced_product_ids))
+            .values(is_active=False)
+        )
+        await session.execute(deact_stmt)
+
     await session.commit()
-    logger.info(f"Sync complete: {added_count} added, {updated_count} updated.")
+    logger.info(f"Sync complete: {added_count} added, {updated_count} updated, {len(synced_product_ids)} active.")
     return {
         "success": True,
         "total": len(response.products),

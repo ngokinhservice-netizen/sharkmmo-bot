@@ -14,7 +14,7 @@ services:
       - key: BOT_TOKEN
         value: 9296323573:AAHL1jW2oODAzC7HxznYUkFv6N3HEHuv3uw
       - key: CANBOSO_API_KEY
-        value: tgb_3c16f012e7e3b854c6f0a2bc12a22336983be8116b61aef4
+        value: tgb_db4b7dd698b3b11fffb259a47fd42546de59286c17d75c25
       - key: ADMIN_IDS
         value: "8650996593"
       - key: BANK_CODE
