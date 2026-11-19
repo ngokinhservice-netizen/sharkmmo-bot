@@ -371,6 +371,8 @@ async def handle_confirm_buy_yes(
         if oth:
             acc_text += f"• Ghi chú: <code>{oth}</code>\n"
 
+    details_content = acc_text if acc_text else "\n<i>(Đơn hàng kích hoạt theo email/slot. Vui lòng kiểm tra email của bạn hoặc mục Lịch sử đơn hàng)</i>"
+
     success_msg = (
         "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n"
         "   🎉 <b>GIAO DỊCH THÀNH CÔNG!</b> 🎉\n"
@@ -382,7 +384,7 @@ async def handle_confirm_buy_yes(
         "╭───────────────────────╮\n"
         "  🔐 <b>THÔNG TIN TÀI KHOẢN BÀN GIAO:</b>\n"
         "╰───────────────────────╯"
-        f"{acc_text or '\n<i>(Đơn hàng kích hoạt theo email/slot. Vui lòng kiểm tra email của bạn hoặc mục Lịch sử đơn hàng)</i>'}\n\n"
+        f"{details_content}\n\n"
         "🛡️ <i>Đơn hàng được bảo hành 1 đổi 1. Bấm vào mã đơn hàng để sao chép khi cần hỗ trợ!</i>"
     )
 
