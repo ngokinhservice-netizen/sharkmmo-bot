@@ -42,6 +42,7 @@ class ProductCache(Base):
     emoji = Column(String(100), nullable=True)
     product_type = Column(String(50), nullable=False)  # account, slot, upgrade_account
     category = Column(String(100), default="Khác", index=True, nullable=False)
+    brand_slug = Column(String(50), index=True, nullable=True)
     
     # Pricing info
     source_price = Column(Float, default=0.0, nullable=False)

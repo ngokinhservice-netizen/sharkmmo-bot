@@ -1,32 +1,18 @@
-from typing import List, Optional
+import math
+from typing import List, Optional, Tuple, Dict, Any
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     InlineKeyboardMarkup,
     InlineKeyboardButton
 )
-
-QUICK_BRAND_TAGS = [
-    ("🎨 Canva", "Canva"),
-    ("✂️ Capcut", "Capcut"),
-    ("🤖 Chat Gpt", "ChatGPT"),
-    ("🎬 Youtube", "Youtube"),
-    ("💥 Api Claude", "Claude"),
-    ("⚙️ Api CodeX", "CodeX"),
-    ("✉️ Gmail", "Gmail"),
-    ("🎙️ Elevenlabs", "Elevenlabs"),
-    ("📁 Notion", "Notion"),
-    ("🔑 VPN", "VPN"),
-    ("📦 Api Cursor", "Cursor"),
-    ("☀️ Suno", "Suno"),
-    ("📹 Zoom", "Zoom"),
-    ("⚡ Grok Api", "Grok"),
-    ("📁 Api Muse", "Muse"),
-    ("📁 Api Deepseek", "Deepseek"),
-]
+from backend.app.services.brand_catalog import BRANDS_LAYOUT, BRANDS_DICT, match_product_to_brand
 
 
 def get_product_icon(name: str) -> str:
+    slug = match_product_to_brand(name)
+    if slug in BRANDS_DICT:
+        return BRANDS_DICT[slug]["icon"]
     n = name.lower()
     if "canva" in n:
         return "🎨"
@@ -35,9 +21,9 @@ def get_product_icon(name: str) -> str:
     if "chatgpt" in n or "gpt" in n:
         return "🤖"
     if "youtube" in n:
-        return "🎬"
+        return "🔴"
     if "claude" in n:
-        return "💥"
+        return "✴️"
     if "codex" in n:
         return "⚙️"
     if "gmail" in n:
@@ -45,29 +31,29 @@ def get_product_icon(name: str) -> str:
     if "elevenlabs" in n or "eleven" in n:
         return "🎙️"
     if "notion" in n:
-        return "📁"
+        return "📝"
     if "vpn" in n or "hma" in n or "proxy" in n:
-        return "🔑"
+        return "🛡️"
     if "cursor" in n:
         return "📦"
     if "suno" in n:
-        return "☀️"
+        return "🎵"
     if "zoom" in n:
         return "📹"
     if "grok" in n:
         return "⚡"
     if "deepseek" in n:
-        return "📁"
+        return "🐋"
     if "gemini" in n:
-        return "➕"
+        return "✨"
     if "netflix" in n:
         return "🍿"
     if "office" in n or "365" in n or "ms365" in n:
-        return "🛍️"
+        return "💼"
     if "duolingo" in n:
-        return "🐸"
+        return "🦉"
     if "muse" in n:
-        return "🛍️"
+        return "🎼"
     return "🔹"
 
 
@@ -85,7 +71,7 @@ def format_mmo_price(val: float) -> str:
 
 def get_main_menu() -> ReplyKeyboardMarkup:
     """
-    Standard Vietnamese 8-button menu:
+    Standard Vietnamese 8-button reply menu:
     - 🛍️ Mua sản phẩm
     - 📦 Danh mục sản phẩm
     - 🔎 Tìm kiếm
@@ -116,113 +102,129 @@ def get_main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
 
 
-def get_store_catalog_keyboard(
+def get_brand_catalog_keyboard(
+    featured_products: Optional[List[dict]] = None
+) -> InlineKeyboardMarkup:
+    """
+    Renders the exact Canboso catalog layout (Image 3):
+    - 3-column grid of all 62 Brand buttons
+    - Below grid: Featured / hot products (1 per row)
+    - Bottom button: 🔄 Cập nhật sản phẩm
+    """
+    keyboard = []
+
+    # 1. 3-column grid of all 62 brands
+    row = []
+    for name, slug, icon, _, _ in BRANDS_LAYOUT:
+        btn_text = f"{icon} {name}"
+        row.append(InlineKeyboardButton(text=btn_text, callback_data=f"b:{slug}"))
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
+
+    # 2. Featured / Hot products below brand grid (1 per row, compact MMO style)
+    if featured_products:
+        for p in featured_products:
+            icon = get_product_icon(p["name"])
+            price_str = format_mmo_price(p["calculated_price"])
+            stock_qty = p.get("available_qty")
+            if stock_qty is None or stock_qty >= 9999:
+                stock_str = "📦 ∞"
+            elif stock_qty <= 0:
+                stock_str = "🔴 Hết"
+            else:
+                stock_str = f"📦 {stock_qty}"
+
+            name_clean = p["name"]
+            # Shorten if too long for a single button
+            if len(name_clean) > 42:
+                name_clean = name_clean[:39] + "..."
+
+            btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
+            keyboard.append([
+                InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
+            ])
+
+    # 3. Bottom Action Row: Refresh Store
+    keyboard.append([
+        InlineKeyboardButton(text="🔄 Cập nhật sản phẩm", callback_data="refresh_store")
+    ])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_brand_packages_keyboard(
+    slug: str,
     products: List[dict],
-    selected_tag: Optional[str] = None,
     page: int = 1,
     total_pages: int = 1
 ) -> InlineKeyboardMarkup:
     """
-    Layout matching Image 2 exactly:
-    - Top: 3-column brand tags grid
-    - Middle: Products full-width items with {icon} {name} | {price} | 📦 {stock}
-    - Bottom: Refresh & Home / Support controls
+    Renders the packages inside a specific brand ("ấn vào trong mới ra các gói khác"):
+    - 1-column list of all package variants for this brand
+    - Pagination row if > 1 page
+    - Bottom row: [ 🔙 Quay lại danh mục ] [ 🏠 Trang chủ ]
     """
     keyboard = []
 
-    # 1. Top Quick Brand Tags in 3 Columns (matching Image 2)
-    tag_row = []
-    for label, tag_key in QUICK_BRAND_TAGS:
-        # Highlight active tag if selected
-        btn_text = f"🔥 {label}" if selected_tag == tag_key else label
-        tag_row.append(InlineKeyboardButton(text=btn_text, callback_data=f"tag:{tag_key}"))
-        if len(tag_row) == 3:
-            keyboard.append(tag_row)
-            tag_row = []
-    if tag_row:
-        keyboard.append(tag_row)
-
-    # 2. Product Items (1 per row, clean MMO compact style)
     for p in products:
         icon = get_product_icon(p["name"])
         price_str = format_mmo_price(p["calculated_price"])
-        stock_qty = p.get("available_qty") or 0
-        stock_str = f"📦 {stock_qty}"
+        stock_qty = p.get("available_qty")
+        if stock_qty is None or stock_qty >= 9999:
+            stock_str = "📦 ∞"
+        elif stock_qty <= 0:
+            stock_str = "🔴 Hết hàng"
+        else:
+            stock_str = f"📦 {stock_qty}"
 
-        # Truncate product name smoothly
-        name = p["name"].strip()
-        if len(name) > 32:
-            name = name[:30] + "..."
+        name_clean = p["name"]
+        if len(name_clean) > 42:
+            name_clean = name_clean[:39] + "..."
 
-        btn_text = f"{icon} {name} | {price_str} | {stock_str}"
+        btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
         keyboard.append([
             InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
         ])
 
-    # 3. Pagination row (if multiple pages)
+    # Pagination row
     if total_pages > 1:
         nav_row = []
-        tag_param = f":{selected_tag}" if selected_tag else ""
         if page > 1:
             nav_row.append(
-                InlineKeyboardButton(text="◀️ Trước", callback_data=f"spage:{page - 1}{tag_param}")
+                InlineKeyboardButton(text="◀️ Trước", callback_data=f"bp:{slug}:{page - 1}")
             )
         nav_row.append(
             InlineKeyboardButton(text=f"Trang {page}/{total_pages}", callback_data="noop")
         )
         if page < total_pages:
             nav_row.append(
-                InlineKeyboardButton(text="Sau ▶️", callback_data=f"spage:{page + 1}{tag_param}")
+                InlineKeyboardButton(text="Sau ▶️", callback_data=f"bp:{slug}:{page + 1}")
             )
         keyboard.append(nav_row)
 
-    # 4. Refresh / All products button
-    if selected_tag:
-        keyboard.append([
-            InlineKeyboardButton(text="🔄 Xem tất cả sản phẩm", callback_data="refresh_store")
-        ])
-    else:
-        keyboard.append([
-            InlineKeyboardButton(text="🔄 Làm mới", callback_data="refresh_store")
-        ])
-
-    # 5. Bottom Navigation row (matching Image 2)
+    # Return buttons
     keyboard.append([
-        InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu"),
-        InlineKeyboardButton(text="🧑‍💻 Hỗ trợ", callback_data="support_menu")
+        InlineKeyboardButton(text="🔙 Quay lại danh mục", callback_data="store_brands"),
+        InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
     ])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def get_categories_keyboard(categories: List[str]) -> InlineKeyboardMarkup:
-    buttons = []
-    row = []
-    for cat in categories:
-        row.append(InlineKeyboardButton(text=f"{cat}", callback_data=f"cat:{cat}"))
-        if len(row) == 2:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-
-    buttons.append([
-        InlineKeyboardButton(text="🔍 Xem tất cả sản phẩm (Kho hàng)", callback_data="products:page:1")
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
 def get_products_pagination_keyboard(
     products: List[dict],
-    page: int,
-    total_pages: int,
+    page: int = 1,
+    total_pages: int = 1,
     category: Optional[str] = None
 ) -> InlineKeyboardMarkup:
     buttons = []
     for p in products:
         stock_badge = f"{p['available_qty']} còn" if p.get("available_qty") is not None else "Sẵn có"
         price_text = format_mmo_price(p['calculated_price'])
-        name_short = p['name'][:24].strip()
+        name_short = p['name'][:30].strip()
         icon = get_product_icon(p['name'])
         btn_text = f"{icon} {name_short} | {price_text} | 📦 {stock_badge}"
         buttons.append([
@@ -230,31 +232,34 @@ def get_products_pagination_keyboard(
         ])
 
     # Pagination row
-    nav_row = []
-    cat_param = f":{category}" if category else ""
-    if page > 1:
+    if total_pages > 1:
+        nav_row = []
+        cat_param = f":{category}" if category else ""
+        if page > 1:
+            nav_row.append(
+                InlineKeyboardButton(text="◀️ Trước", callback_data=f"page:{page - 1}{cat_param}")
+            )
         nav_row.append(
-            InlineKeyboardButton(text="◀️ Trước", callback_data=f"page:{page - 1}{cat_param}")
+            InlineKeyboardButton(text=f"Trang {page}/{total_pages}", callback_data="noop")
         )
-    nav_row.append(
-        InlineKeyboardButton(text=f"Trang {page}/{total_pages}", callback_data="noop")
-    )
-    if page < total_pages:
-        nav_row.append(
-            InlineKeyboardButton(text="Sau ▶️", callback_data=f"page:{page + 1}{cat_param}")
-        )
-    if nav_row:
+        if page < total_pages:
+            nav_row.append(
+                InlineKeyboardButton(text="Sau ▶️", callback_data=f"page:{page + 1}{cat_param}")
+            )
         buttons.append(nav_row)
 
-    # Return button
     buttons.append([
-        InlineKeyboardButton(text="📂 Về danh mục chính", callback_data="categories")
+        InlineKeyboardButton(text="🔙 Quay lại danh mục", callback_data="store_brands"),
+        InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
     ])
-
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_product_detail_keyboard(product_id: str, is_available: bool = True) -> InlineKeyboardMarkup:
+def get_product_detail_keyboard(
+    product_id: str,
+    brand_slug: Optional[str] = None,
+    is_available: bool = True
+) -> InlineKeyboardMarkup:
     buttons = []
     if is_available:
         buttons.append([
@@ -264,10 +269,24 @@ def get_product_detail_keyboard(product_id: str, is_available: bool = True) -> I
         buttons.append([
             InlineKeyboardButton(text="⚠️ Tạm hết hàng", callback_data="noop")
         ])
-    buttons.append([
-        InlineKeyboardButton(text="🔄 Cửa hàng", callback_data="refresh_store"),
+
+    # Back navigation
+    nav_row = []
+    if brand_slug and brand_slug in BRANDS_DICT:
+        brand_name = BRANDS_DICT[brand_slug]["name"]
+        nav_row.append(
+            InlineKeyboardButton(text=f"🔙 {brand_name}", callback_data=f"b:{brand_slug}")
+        )
+    else:
+        nav_row.append(
+            InlineKeyboardButton(text="🔙 Danh mục", callback_data="store_brands")
+        )
+
+    nav_row.append(
         InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
-    ])
+    )
+    buttons.append(nav_row)
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -359,3 +378,8 @@ def get_admin_deposit_keyboard(transaction_id: int) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+# Backward compatibility aliases
+get_store_catalog_keyboard = get_brand_catalog_keyboard
+get_categories_keyboard = get_brand_catalog_keyboard

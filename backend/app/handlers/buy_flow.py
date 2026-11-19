@@ -388,12 +388,27 @@ async def handle_confirm_buy_yes(
         "🛡️ <i>Đơn hàng được bảo hành 1 đổi 1. Bấm vào mã đơn hàng để sao chép khi cần hỗ trợ!</i>"
     )
 
-    await callback.message.edit_text(success_msg, parse_mode="HTML")
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🛍️ Tiếp tục mua hàng", callback_data="store_brands"),
+            InlineKeyboardButton(text="🧾 Lịch sử đơn hàng", callback_data="user_orders")
+        ],
+        [
+            InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
+        ]
+    ])
+    await callback.message.edit_text(success_msg, reply_markup=kb, parse_mode="HTML")
     await callback.answer("Mua hàng thành công!", show_alert=True)
 
 
 @router.callback_query(BuyState.waiting_for_confirmation, F.data == "confirm_buy_no")
 async def handle_confirm_buy_no(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Đã hủy thao tác mua hàng.", parse_mode="HTML")
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🛍️ Danh mục sản phẩm", callback_data="store_brands"),
+            InlineKeyboardButton(text="🏠 Trang chủ", callback_data="home_menu")
+        ]
+    ])
+    await callback.message.edit_text("❌ Đã hủy thao tác mua hàng.", reply_markup=kb, parse_mode="HTML")
     await callback.answer("Đã hủy đơn hàng.")

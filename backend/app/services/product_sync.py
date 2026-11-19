@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.models.models import ProductCache, utcnow
 from backend.app.services.canboso import canboso_client, ProductsResponse
 from backend.app.services.pricing import pricing_engine
+from backend.app.services.brand_catalog import match_product_to_brand
 
 logger = logging.getLogger("sharkmmo.sync")
 
@@ -53,12 +54,15 @@ async def sync_canboso_products(session: AsyncSession, force_refresh: bool = Tru
         promotions = [p.model_dump() for p in item.promotions] if item.promotions else []
         reqs = item.purchaseRequirements.model_dump() if item.purchaseRequirements else None
 
+        brand_slug = match_product_to_brand(item.name, item.emoji)
+
         if db_product:
             # Update existing
             db_product.name = item.name
             db_product.description = item.description
             db_product.image = item.image
             db_product.emoji = item.emoji
+            db_product.brand_slug = brand_slug
             db_product.product_type = item.productType
             db_product.source_price = source_price
             db_product.currency = currency
@@ -82,6 +86,7 @@ async def sync_canboso_products(session: AsyncSession, force_refresh: bool = Tru
                 description=item.description,
                 image=item.image,
                 emoji=item.emoji,
+                brand_slug=brand_slug,
                 product_type=item.productType,
                 category=category,
                 source_price=source_price,

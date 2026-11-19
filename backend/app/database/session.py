@@ -37,3 +37,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if "sqlite" in settings.DATABASE_URL:
+            try:
+                from sqlalchemy import text
+                await conn.execute(text("ALTER TABLE products_cache ADD COLUMN brand_slug VARCHAR(50);"))
+            except Exception:
+                pass

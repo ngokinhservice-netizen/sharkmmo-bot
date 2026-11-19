@@ -1,10 +1,10 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.models import User
-from backend.app.keyboards.menus import get_main_menu, get_categories_keyboard
+from backend.app.keyboards.menus import get_main_menu
 
 router = Router(name="start")
 
@@ -31,10 +31,25 @@ async def handle_start(message: Message, current_user: User):
         "⚡ <b>Giao hàng tự động:</b> Nhận hàng trong 1 giây\n"
         "💳 <b>Nạp tiền VietQR:</b> Tự động duyệt 24/7\n"
         "🔒 <b>Bảo hành uy tín:</b> 1 đổi 1 chu đáo\n\n"
-        "👇 <i>Sử dụng các nút menu bên dưới để bắt đầu:</i>"
+        "👇 <i>Bấm nút bên dưới hoặc menu bàn phím để bắt đầu mua sắm:</i>"
     )
+    inline_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🛍️ Mở Cửa Hàng Sản Phẩm", callback_data="store_brands")
+        ],
+        [
+            InlineKeyboardButton(text="💰 Nạp Tiền Vào Ví", callback_data="dep_amt:50000"),
+            InlineKeyboardButton(text="💬 Hỗ Trợ 24/7", callback_data="support_menu")
+        ]
+    ])
     await message.answer(
         text=text,
+        reply_markup=inline_kb,
+        parse_mode="HTML"
+    )
+    # Also ensure reply keyboard is active
+    await message.answer(
+        "📱 <i>Menu phím tắt nhanh bên dưới:</i>",
         reply_markup=get_main_menu(),
         parse_mode="HTML"
     )
