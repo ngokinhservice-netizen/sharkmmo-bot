@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # Pricing Defaults
     DEFAULT_MARKUP_TYPE: str = Field(default="percent", description="'percent' or 'fixed'")
-    DEFAULT_MARKUP_VALUE: float = Field(default=20.0, description="Default markup value (e.g. 20% or 10000 VND)")
+    DEFAULT_MARKUP_VALUE: float = Field(default=40.0, description="Default markup value (e.g. 40% or 10000 VND)")
     DEFAULT_ROUND_TO: int = Field(default=1000, description="Round calculated price to nearest (e.g. 1000 VND)")
     AUTO_SYNC_INTERVAL_MINUTES: int = Field(default=15, description="Minutes between automated product syncs")
 

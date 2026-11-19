@@ -28,6 +28,8 @@ services:
       - key: DATABASE_URL
         value: sqlite+aiosqlite:///./sharkmmo.db
       - key: DEFAULT_MARKUP_PERCENT
-        value: "20.0"
+        value: "40.0"
+      - key: DEFAULT_MARKUP_VALUE
+        value: "40.0"
       - key: DEFAULT_ROUND_TO
         value: "1000"
