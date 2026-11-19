@@ -13,7 +13,7 @@ logger = logging.getLogger("sharkmmo.brands")
 BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
     # Row 1
     ("Adobe", "adobe", "🟥", ["adobe", "photoshop", "illustrator", "premiere", "acrobat", "lightroom"], ["adobe"]),
-    ("Antigravity", "antigravity", "🚀", ["antigravity"], ["antigravity"]),
+    ("Antigravity", "antigravity", "🔺", ["antigravity"], ["antigravity"]),
     ("API Claude", "api_claude", "✴️", ["api claude", "claude api", "build api claude"], []),
     # Row 2
     ("API Codex", "api_codex", "⚙️", ["api codex", "codex api", "codex"], []),
@@ -88,7 +88,7 @@ BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
     # Row 18
     ("Alight Motion", "alight_motion", "💫", ["alight motion", "alight"], ["alight_motion"]),
     ("Wispr Flow", "wispr_flow", "🌬️", ["wispr flow", "wispr"], ["wispr_flow"]),
-    ("Tool Veo3", "tool_veo3", "🌟", ["tool veo3", "veo 3", "veo3", "veo"], []),
+    ("Tool Veo3", "tool_veo3", "✦", ["tool veo3", "veo 3", "veo3", "veo"], []),
     # Row 19
     ("Amazon Prime", "amazon_prime", "📦", ["amazon prime", "amazon", "prime video"], ["amazon_prime"]),
     ("linkedin", "linkedin", "💼", ["linkedin"], ["linkedin"]),
@@ -99,7 +99,7 @@ BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
     ("Pippit AI", "pippit_ai", "🐣", ["pippit", "pipit", "pitpit"], []),
     # Row 21
     ("Claude Official", "claude_official", "✴️", ["claude pro", "claude max", "claude official", "claude 3", "claude x5", "claude"], ["claude"]),
-    ("Google Flow Veo3 Ultra", "flow_veo3", "💎", ["google flow", "veo3 ultra", "admin ultra"], []),
+    ("Google Flow Veo3 Ultra", "flow_veo3", "🔺", ["google flow", "veo3 ultra", "admin ultra"], []),
 ]
 
 BRANDS_DICT: Dict[str, Dict[str, Any]] = {
@@ -120,7 +120,7 @@ def match_product_to_brand(name: str, emoji: Optional[str] = None) -> str:
     em = (emoji or "").lower()
 
     # Priority compound brands first
-    priority_slugs = ["api_claude", "api_codex", "api_deepseek", "api_gemini", "tool_veo3", "flow_veo3"]
+    priority_slugs = ["flow_veo3", "api_claude", "api_codex", "api_deepseek", "api_gemini", "tool_veo3"]
     for slug in priority_slugs:
         meta = BRANDS_DICT[slug]
         if any(kw in n for kw in meta["keywords"]):
@@ -199,6 +199,16 @@ async def get_brand_products(
     return products, total_count, total_pages
 
 
+HOT_FEATURED_PATTERNS = [
+    "%Admin Ultra x20 + Veo3 Ultra 25K Credits 1 tháng BHF%",
+    "%Kling Team 20K Credits 1 tháng BH 2 ngày%",
+    "%ChatGPT Plus 1 tháng BH 1 ngày%",
+    "%ChatGPT Plus 1 tháng BHF%",
+    "%Higgsfield Ultra 9K Credits 1 tháng BH 1 ngày%",
+    "%Build API Claude theo yêu cầu 1 tháng BHF%"
+]
+
+
 async def get_featured_store_products(
     session: AsyncSession,
     limit: int = 7
@@ -207,18 +217,43 @@ async def get_featured_store_products(
     Returns the top featured / hot products matching Canboso's featured shelf:
     Admin Ultra, Kling, ChatGPT Plus, Higgsfield, Build API Claude, etc.
     """
-    # Prefer in-stock items with highest availability & popularity
-    in_stock_order = case((ProductCache.available_qty > 0, 0), else_=1)
-    q = (
-        select(ProductCache)
-        .where(ProductCache.is_active == True)
-        .order_by(
-            in_stock_order,
-            ProductCache.available_qty.desc(),
-            ProductCache.sold_qty.desc(),
-            ProductCache.id.asc()
+    featured = []
+    seen_ids = set()
+
+    # 1. Exact match the hot items in Canboso layout
+    for pat in HOT_FEATURED_PATTERNS:
+        q = (
+            select(ProductCache)
+            .where(ProductCache.name.ilike(pat), ProductCache.is_active == True)
+            .limit(1)
         )
-        .limit(limit)
-    )
-    res = await session.execute(q)
-    return res.scalars().all()
+        res = await session.execute(q)
+        p = res.scalars().first()
+        if p and p.product_id not in seen_ids:
+            featured.append(p)
+            seen_ids.add(p.product_id)
+
+    # 2. Fill any remaining slots with highest available quantity
+    if len(featured) < limit:
+        remaining = limit - len(featured)
+        in_stock_order = case((ProductCache.available_qty > 0, 0), else_=1)
+        q = (
+            select(ProductCache)
+            .where(
+                ProductCache.is_active == True,
+                ProductCache.product_id.not_in(list(seen_ids)) if seen_ids else True
+            )
+            .order_by(
+                in_stock_order,
+                ProductCache.available_qty.desc(),
+                ProductCache.sold_qty.desc()
+            )
+            .limit(remaining)
+        )
+        res = await session.execute(q)
+        for p in res.scalars().all():
+            if p.product_id not in seen_ids:
+                featured.append(p)
+                seen_ids.add(p.product_id)
+
+    return featured[:limit]

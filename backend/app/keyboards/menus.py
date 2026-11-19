@@ -58,14 +58,9 @@ def get_product_icon(name: str) -> str:
 
 
 def format_mmo_price(val: float) -> str:
-    if val >= 1_000_000:
-        if val % 1_000_000 == 0:
-            return f"{int(val // 1_000_000)}Tr"
-        return f"{val / 1_000:,.0f}k"
     if val >= 1000:
-        if val % 1000 == 0:
-            return f"{int(val // 1000)}k"
-        return f"{int(val)}"
+        k_val = int(round(val / 1000))
+        return f"{k_val}k"
     return f"{int(val)}đ"
 
 
@@ -139,8 +134,8 @@ def get_brand_catalog_keyboard(
 
             name_clean = p["name"]
             # Shorten if too long for a single button
-            if len(name_clean) > 42:
-                name_clean = name_clean[:39] + "..."
+            if len(name_clean) > 60:
+                name_clean = name_clean[:57] + "..."
 
             btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
             keyboard.append([

@@ -37,7 +37,7 @@ async def render_catalog_home(
     - Featured / Hot products shelf below the brand grid
     - Bottom button: 🔄 Cập nhật sản phẩm
     """
-    featured = await get_featured_store_products(session, limit=7)
+    featured = await get_featured_store_products(session, limit=6)
     feat_dicts = [
         {
             "product_id": p.product_id,
