@@ -8,7 +8,19 @@ from backend.app.core.config import settings
 from backend.app.bot.middlewares.db import DbSessionMiddleware
 from backend.app.bot.middlewares.throttling import ThrottlingMiddleware
 from backend.app.bot.middlewares.auth import UserAuthMiddleware
-from backend.app.handlers import start
+
+from backend.app.handlers import (
+    start,
+    catalog,
+    search,
+    wallet,
+    orders,
+    promotions,
+    account,
+    support,
+    buy_flow,
+    admin_bot
+)
 
 logger = logging.getLogger("sharkmmo.bot")
 
@@ -17,7 +29,7 @@ def create_bot() -> Bot:
     if not settings.BOT_TOKEN:
         logger.warning("BOT_TOKEN is not configured in environment!")
     return Bot(
-        token=settings.BOT_TOKEN or "8717942584:AAF2XdxB0mf92mjY5GeYOTWstEHU-NuQAm8",
+        token=settings.BOT_TOKEN or "9296323573:AAHL1jW2oODAzC7HxznYUkFv6N3HEHuv3uw",
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
@@ -25,13 +37,22 @@ def create_bot() -> Bot:
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Register Middlewares
+    # Register Middlewares (Order matters: DB -> Throttling -> Auth)
     dp.update.middleware(DbSessionMiddleware())
     dp.message.middleware(ThrottlingMiddleware())
     dp.callback_query.middleware(ThrottlingMiddleware())
     dp.update.middleware(UserAuthMiddleware())
 
-    # Register only clean notification start router
+    # Register Handler Routers for SHARKMMO Store
     dp.include_router(start.router)
+    dp.include_router(catalog.router)
+    dp.include_router(search.router)
+    dp.include_router(wallet.router)
+    dp.include_router(orders.router)
+    dp.include_router(promotions.router)
+    dp.include_router(account.router)
+    dp.include_router(support.router)
+    dp.include_router(buy_flow.router)
+    dp.include_router(admin_bot.router)
 
     return dp

@@ -16,8 +16,7 @@ class SePayProcessor:
     async def process_webhook(cls, session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Process bank transfer incoming webhook from SePay.
-        Notifies Admin on Telegram for ALL incoming deposits,
-        prevents duplicate webhook processing, and credits user if matching memo found.
+        Prevents duplicate webhook processing, verifies amount and transfer memo.
         """
         gateway_id = str(payload.get("id") or "")
         raw_amount = (
@@ -36,35 +35,13 @@ class SePayProcessor:
             or ""
         ).strip()
         account_number = payload.get("accountNumber", "")
-        tx_date = payload.get("transactionDate") or utcnow().strftime("%H:%M:%S %d/%m/%Y")
 
         logger.info(f"Incoming SePay webhook: ID={gateway_id}, Amount={amount_in}, Content='{content}'")
 
         if amount_in <= 0:
             return {"success": False, "message": "Ignored outgoing or zero-amount transaction."}
 
-        # 1. Send instant Telegram alert to Admin for EVERY incoming deposit
-        admin_chat_id = settings.ADMIN_IDS[0] if settings.ADMIN_IDS else 8650996593
-        if settings.BOT_TOKEN and not settings.BOT_TOKEN.startswith("dummy"):
-            try:
-                from backend.app.bot.bot import create_bot
-                bot = create_bot()
-                async with bot:
-                    admin_msg = (
-                        "💰 <b>[SEPAY] THÔNG BÁO TIỀN VÀO TÀI KHOẢN!</b>\n"
-                        "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
-                        f"💵 <b>Số tiền nạp:</b> <code>+{amount_in:,.0f} VND</code>\n"
-                        f"📝 <b>Nội dung chuyển khoản:</b> <code>{content}</code>\n"
-                        f"🏦 <b>Tài khoản nhận:</b> <code>{account_number}</code>\n"
-                        f"🆔 <b>Mã SePay:</b> <code>{gateway_id or 'SePay-Auto'}</code>\n"
-                        f"⏰ <b>Thời gian:</b> <code>{tx_date}</code>\n\n"
-                        "⚡ <i>Hệ thống SePay tự động ghi nhận giao dịch!</i>"
-                    )
-                    await bot.send_message(chat_id=admin_chat_id, text=admin_msg, parse_mode="HTML")
-            except Exception as e_notify:
-                logger.error(f"Failed to send SePay admin notification: {e_notify}")
-
-        # 2. Check idempotency: Have we already processed this gateway_tx_id?
+        # 1. Check idempotency: Have we already processed this gateway_tx_id?
         if gateway_id:
             duplicate_q = select(PaymentTransaction).where(PaymentTransaction.gateway_tx_id == gateway_id)
             dup_res = await session.execute(duplicate_q)
@@ -73,18 +50,22 @@ class SePayProcessor:
                 logger.info(f"Webhook already processed for gateway_tx_id={gateway_id}")
                 return {"success": True, "already_processed": True, "transaction_code": existing_tx.transaction_code}
 
-        # 3. Match pending transaction by transfer content
+        # 2. Match pending transaction by transfer content
+        # Check all pending transactions
         pending_q = select(PaymentTransaction).where(PaymentTransaction.status == "pending")
         res = await session.execute(pending_q)
         pending_txs = res.scalars().all()
 
         matched_tx: Optional[PaymentTransaction] = None
         for tx in pending_txs:
+            # Check if tx.transfer_content is contained in the bank transaction content (case-insensitive)
+            # Remove spaces for resilient matching: "SHARKNAP1336962312"
             clean_bank_content = re.sub(r"\s+", "", content.upper())
             clean_tx_content = re.sub(r"\s+", "", tx.transfer_content.upper())
 
             if clean_tx_content in clean_bank_content or tx.transfer_content.upper() in content.upper():
-                if abs(tx.amount - amount_in) < 1.0:
+                # Verify amount
+                if abs(tx.amount - amount_in) < 1.0:  # Matching amount
                     matched_tx = tx
                     break
 
@@ -98,7 +79,7 @@ class SePayProcessor:
             )
             return confirm_res
 
-        # 4. Fallback match: "SHARK NAP <TELEGRAM_ID>"
+        # 3. If no pending transaction matches exactly, try fallback match: "SHARK NAP <TELEGRAM_ID>"
         match = re.search(r"SHARK\s*NAP\s*(\d{6,15})", content, re.IGNORECASE)
         if match:
             telegram_id = int(match.group(1))
@@ -107,6 +88,7 @@ class SePayProcessor:
             user = user_res.scalars().first()
 
             if user:
+                # Auto create completed transaction
                 tx_code = payment_service.generate_tx_code()
                 auto_tx = PaymentTransaction(
                     transaction_code=tx_code,
@@ -129,7 +111,7 @@ class SePayProcessor:
                 await session.commit()
                 logger.info(f"Auto-credited {amount_in} VND to user {telegram_id} based on memo match.")
 
-                # Notify user if matched
+                # Send Telegram notification
                 if settings.BOT_TOKEN and not settings.BOT_TOKEN.startswith("dummy"):
                     try:
                         from backend.app.bot.bot import create_bot
@@ -141,7 +123,8 @@ class SePayProcessor:
                                 f"🆔 Mã giao dịch: <code>{tx_code}</code>\n"
                                 f"💰 Số tiền: <b>+{amount_in:,.0f} VND</b>\n"
                                 f"💳 Số dư ví hiện có: <b>{user.balance:,.0f} VND</b>\n\n"
-                                "⚡ <i>Cảm ơn bạn đã nạp tiền qua SePay!</i>"
+                                "⚡ <i>Hệ thống tự động cộng tiền qua SePay thành công!</i>\n"
+                                "Bấm <b>🛍️ Mua sản phẩm</b> để bắt đầu mua sắm ngay!"
                             )
                             await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode="HTML")
                     except Exception as e_notify:
@@ -155,13 +138,8 @@ class SePayProcessor:
                     "new_balance": user.balance
                 }
 
-        logger.info(f"General deposit received: Content='{content}', Amount={amount_in}")
-        return {
-            "success": True,
-            "message": "Deposit recorded and admin notified successfully.",
-            "amount": amount_in,
-            "content": content
-        }
+        logger.warning(f"Unmatched payment transaction: Content='{content}', Amount={amount_in}")
+        return {"success": False, "message": "No matching pending transaction or valid user ID found in content."}
 
 
 sepay_processor = SePayProcessor()
