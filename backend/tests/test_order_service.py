@@ -47,7 +47,8 @@ async def test_order_insufficient_balance(async_db):
 
     assert res["success"] is False
     assert res["need_deposit"] is True
-    assert res["missing_amount"] == 50000.0  # 60,000 - 10,000 = 50,000
+    # 50,000 with 40% markup = 70,000; missing: 70,000 - 10,000 = 60,000
+    assert res["missing_amount"] == 60000.0
 
 
 @pytest.mark.asyncio

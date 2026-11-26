@@ -7,6 +7,7 @@ from aiogram.types import (
     InlineKeyboardButton
 )
 from backend.app.services.brand_catalog import BRANDS_LAYOUT, BRANDS_DICT, match_product_to_brand
+from backend.app.services.custom_emoji_store import get_custom_emoji_id
 
 
 def get_product_icon(name: str) -> str:
@@ -108,11 +109,15 @@ def get_brand_catalog_keyboard(
     """
     keyboard = []
 
-    # 1. 3-column grid of all 62 brands
+    # 1. 3-column grid of all brands (exact Canboso layout)
     row = []
     for name, slug, icon, _, _ in BRANDS_LAYOUT:
-        btn_text = f"{icon} {name}"
-        row.append(InlineKeyboardButton(text=btn_text, callback_data=f"b:{slug}"))
+        emoji_id = get_custom_emoji_id(slug)
+        if emoji_id:
+            row.append(InlineKeyboardButton(text=name, callback_data=f"b:{slug}", icon_custom_emoji_id=emoji_id))
+        else:
+            btn_text = f"{icon} {name}"
+            row.append(InlineKeyboardButton(text=btn_text, callback_data=f"b:{slug}"))
         if len(row) == 3:
             keyboard.append(row)
             row = []
@@ -122,6 +127,8 @@ def get_brand_catalog_keyboard(
     # 2. Featured / Hot products below brand grid (1 per row, compact MMO style)
     if featured_products:
         for p in featured_products:
+            brand_slug = match_product_to_brand(p["name"], p.get("emoji"))
+            brand_emoji_id = get_custom_emoji_id(brand_slug)
             icon = get_product_icon(p["name"])
             price_str = format_mmo_price(p["calculated_price"])
             stock_qty = p.get("available_qty")
@@ -137,15 +144,35 @@ def get_brand_catalog_keyboard(
             if len(name_clean) > 60:
                 name_clean = name_clean[:57] + "..."
 
-            btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
-            keyboard.append([
-                InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
-            ])
+            if brand_emoji_id:
+                btn_text = f"{name_clean} | {price_str} | {stock_str}"
+                keyboard.append([
+                    InlineKeyboardButton(
+                        text=btn_text,
+                        callback_data=f"prod:{p['product_id']}",
+                        icon_custom_emoji_id=brand_emoji_id
+                    )
+                ])
+            else:
+                btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
+                keyboard.append([
+                    InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
+                ])
 
     # 3. Bottom Action Row: Refresh Store
-    keyboard.append([
-        InlineKeyboardButton(text="🔄 Cập nhật sản phẩm", callback_data="refresh_store")
-    ])
+    refresh_emoji_id = get_custom_emoji_id("refresh")
+    if refresh_emoji_id:
+        keyboard.append([
+            InlineKeyboardButton(
+                text="Cập nhật sản phẩm",
+                callback_data="refresh_store",
+                icon_custom_emoji_id=refresh_emoji_id
+            )
+        ])
+    else:
+        keyboard.append([
+            InlineKeyboardButton(text="🔄 Cập nhật sản phẩm", callback_data="refresh_store")
+        ])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -163,6 +190,7 @@ def get_brand_packages_keyboard(
     - Bottom row: [ 🔙 Quay lại danh mục ] [ 🏠 Trang chủ ]
     """
     keyboard = []
+    brand_emoji_id = get_custom_emoji_id(slug)
 
     for p in products:
         icon = get_product_icon(p["name"])
@@ -179,10 +207,20 @@ def get_brand_packages_keyboard(
         if len(name_clean) > 42:
             name_clean = name_clean[:39] + "..."
 
-        btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
-        keyboard.append([
-            InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
-        ])
+        if brand_emoji_id:
+            btn_text = f"{name_clean} | {price_str} | {stock_str}"
+            keyboard.append([
+                InlineKeyboardButton(
+                    text=btn_text,
+                    callback_data=f"prod:{p['product_id']}",
+                    icon_custom_emoji_id=brand_emoji_id
+                )
+            ])
+        else:
+            btn_text = f"{icon} {name_clean} | {price_str} | {stock_str}"
+            keyboard.append([
+                InlineKeyboardButton(text=btn_text, callback_data=f"prod:{p['product_id']}")
+            ])
 
     # Pagination row
     if total_pages > 1:

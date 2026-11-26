@@ -10,6 +10,13 @@ from backend.app.services.canboso import canboso_client
 from backend.app.services.product_sync import sync_canboso_products
 from backend.app.payments.payment_service import payment_service
 from backend.app.core.config import settings
+from backend.app.services.brand_catalog import BRANDS_LAYOUT, BRANDS_DICT
+from backend.app.services.custom_emoji_store import (
+    get_custom_emoji_id,
+    set_custom_emoji,
+    bulk_set_custom_emojis,
+    get_all_custom_emojis
+)
 
 logger = logging.getLogger("sharkmmo.admin_bot")
 router = Router(name="admin_bot")
@@ -148,3 +155,137 @@ async def handle_admin_reject_deposit(callback: CallbackQuery, session: AsyncSes
         await callback.answer("Đã từ chối giao dịch.")
     else:
         await callback.answer(f"Lỗi: {res.get('message')}", show_alert=True)
+
+
+@router.message(Command("set_emoji"))
+async def handle_set_emoji_cmd(message: Message, current_user: User):
+    if not is_admin(current_user):
+        return
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 2:
+        await message.answer(
+            "📖 <b>Cách dùng:</b> <code>/set_emoji &lt;slug&gt; [gửi kèm sticker/emoji hoặc nhập ID]</code>\n"
+            "Ví dụ: <code>/set_emoji adobe 5368324170671202288</code>\n"
+            "Hoặc: <code>/set_emoji adobe</code> và dán emoji logo Adobe vào tin nhắn.",
+            parse_mode="HTML"
+        )
+        return
+
+    slug = parts[1].strip().lower()
+    if slug not in BRANDS_DICT:
+        await message.answer(
+            f"⚠️ Không tìm thấy thương hiệu <code>{slug}</code>.\n"
+            f"Ví dụ các slug hợp lệ: <code>adobe</code>, <code>antigravity</code>, <code>chatgpt</code>, <code>canva</code>, <code>capcut</code>, ...",
+            parse_mode="HTML"
+        )
+        return
+
+    emoji_id = None
+    if message.entities:
+        for ent in message.entities:
+            if ent.type == "custom_emoji":
+                emoji_id = ent.custom_emoji_id
+                break
+
+    if not emoji_id and len(parts) >= 3:
+        raw_id = parts[2].strip()
+        if raw_id.isdigit():
+            emoji_id = raw_id
+
+    if not emoji_id:
+        await message.answer("❌ Vui lòng đính kèm một Telegram Custom Emoji hoặc nhập mã ID số của emoji.")
+        return
+
+    set_custom_emoji(slug, emoji_id)
+    await message.answer(
+        f"✅ <b>ĐÃ CẬP NHẬT CUSTOM EMOJI!</b>\n\n"
+        f"• Thương hiệu: <b>{BRANDS_DICT[slug]['name']}</b> (<code>{slug}</code>)\n"
+        f"• Emoji ID: <code>{emoji_id}</code>\n\n"
+        f"Bàn phím danh mục thương hiệu đã được cập nhật hiển thị logo 100%!",
+        parse_mode="HTML"
+    )
+
+
+@router.message(Command("pack"))
+async def handle_pack_cmd(message: Message, current_user: User):
+    if not is_admin(current_user):
+        return
+    parts = (message.text or "").split()
+    if len(parts) < 2:
+        await message.answer(
+            "📖 <b>Cách dùng:</b> <code>/pack &lt;tên_pack_hoặc_link&gt;</code>\n"
+            "Ví dụ: <code>/pack https://t.me/addemoji/BrandsPack</code>\n"
+            "Hoặc: <code>/pack BrandsPack</code>",
+            parse_mode="HTML"
+        )
+        return
+
+    raw_pack = parts[1].strip()
+    pack_name = raw_pack.rstrip("/").split("/")[-1]
+
+    try:
+        sticker_set = await message.bot.get_sticker_set(pack_name)
+        stickers = sticker_set.stickers or []
+        await message.answer(
+            f"📦 <b>TÌM THẤY GÓI EMOJI:</b> <b>{sticker_set.title}</b>\n"
+            f"• Tên pack: <code>{sticker_set.name}</code>\n"
+            f"• Loại: <code>{sticker_set.sticker_type}</code>\n"
+            f"• Tổng số: <b>{len(stickers)}</b> sticker/emoji\n\n"
+            f"Gói này đã sẵn sàng để bot sử dụng hiển thị các logo trên nút bấm!",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Không thể tải gói emoji <code>{pack_name}</code>: {str(e)}", parse_mode="HTML")
+
+
+@router.message(Command("list_emojis"))
+async def handle_list_emojis_cmd(message: Message, current_user: User):
+    if not is_admin(current_user):
+        return
+    emojis = get_all_custom_emojis()
+    if not emojis:
+        await message.answer("ℹ️ Chưa có Custom Emoji nào được gán.")
+        return
+
+    lines = []
+    for slug, eid in sorted(emojis.items()):
+        name = BRANDS_DICT.get(slug, {}).get("name", slug)
+        lines.append(f"• <b>{name}</b> (<code>{slug}</code>): <code>{eid}</code>")
+
+    await message.answer(
+        f"📋 <b>DANH SÁCH {len(emojis)} CUSTOM EMOJI ĐÃ CẤU HÌNH:</b>\n\n" + "\n".join(lines),
+        parse_mode="HTML"
+    )
+
+
+@router.message(F.entities)
+async def handle_admin_custom_emoji_sniffer(message: Message, current_user: User):
+    """
+    Automatically detects any custom emojis sent by the admin
+    and prints their IDs for instant one-click assignment.
+    """
+    if not is_admin(current_user):
+        return
+    if message.text and message.text.startswith("/"):
+        return
+
+    detected = []
+    for ent in (message.entities or []):
+        if ent.type == "custom_emoji" and ent.custom_emoji_id:
+            detected.append(ent.custom_emoji_id)
+
+    if not detected:
+        return
+
+    unique_ids = list(dict.fromkeys(detected))
+    lines = [f"<code>{cid}</code>" for cid in unique_ids[:15]]
+    more_txt = f"\n...và thêm {len(unique_ids) - 15} emoji nữa." if len(unique_ids) > 15 else ""
+
+    await message.answer(
+        f"🎯 <b>Phát hiện {len(unique_ids)} Custom Emoji từ tin nhắn:</b>\n"
+        + "\n".join(lines)
+        + more_txt
+        + f"\n\n👉 Để gán cho thương hiệu, dùng: <code>/set_emoji &lt;slug&gt; &lt;ID&gt;</code>",
+        parse_mode="HTML"
+    )
+

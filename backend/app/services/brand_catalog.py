@@ -8,7 +8,7 @@ from backend.app.models.models import ProductCache
 
 logger = logging.getLogger("sharkmmo.brands")
 
-# 62 Brands Config matching Canboso layout in Image 3
+# 61 Brands Config matching Canboso layout in latest screenshot (media_1795678770961_bf922967.jpg)
 # Structure: (display_name, slug, icon, keywords, emojis)
 BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
     # Row 1
@@ -42,29 +42,28 @@ BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
     # Row 8
     ("Higgsfield", "higgsfield", "🟩", ["higgsfield", "higgfield"], ["higgfield"]),
     ("Kling", "kling", "🎬", ["kling"], ["kling"]),
-    ("Locket", "locket", "💛", ["locket"], ["locket"]),
+    ("Krea", "krea", "⚫", ["krea"], ["krea"]),
     # Row 9
+    ("Locket", "locket", "💛", ["locket"], ["locket"]),
     ("Lovable", "lovable", "💖", ["lovable"], ["lovable"]),
     ("Manus", "manus", "🦾", ["manus"], ["manus"]),
-    ("MB Bank", "mb_bank", "🏦", ["mb bank", "mbbank"], ["mb"]),
     # Row 10
+    ("MB Bank", "mb_bank", "🏦", ["mb bank", "mbbank"], ["mb"]),
     ("Meitu", "meitu", "🌸", ["meitu"], ["meitu"]),
     ("Microsoft 365", "microsoft_365", "💼", ["microsoft", "office 365", "office", "windows", "ms365", "word", "excel"], ["microsoft_office_365", "windows"]),
-    ("Minimax", "minimax", "⚡", ["minimax"], ["minimax"]),
     # Row 11
+    ("Minimax", "minimax", "⚡", ["minimax"], ["minimax"]),
     ("Notion", "notion", "📝", ["notion"], ["notion"]),
     ("Zoom", "zoom", "📹", ["zoom"], ["zoom"]),
-    ("OpenArt", "openart", "🎨", ["openart"], ["openart"]),
     # Row 12
+    ("OpenArt", "openart", "🎨", ["openart"], ["openart"]),
     ("Outlook", "outlook", "📧", ["outlook", "hotmail"], ["outlook"]),
-    ("Perplexity", "perplexity", "🔍", ["perplexity"], ["perplexity"]),
     ("Quizlet", "quizlet", "🔤", ["quizlet"], ["quizlet"]),
     # Row 13
     ("Qwen", "qwen", "🟣", ["qwen"], []),
     ("Runway", "runway", "🎞️", ["runway"], ["runway"]),
     ("Spotify", "spotify", "🟢", ["spotify"], ["spotify"]),
     # Row 14
-    ("Suno", "suno", "🎵", ["suno"], ["suno"]),
     ("VPN & Proxy", "vpn_proxy", "🛡️", [
         "vpn", "proxy", "nordvpn", "hma", "surfshark", "express", "adguard",
         "hotspot", "purevpn", "norton", "proton", "kaspersky"
@@ -72,34 +71,34 @@ BRANDS_LAYOUT: List[Tuple[str, str, str, List[str], List[str]]] = [
         "nordvpn", "hma_vpn", "surfshark", "express", "adguard_vpn",
         "hotspot_shield", "purevpn", "norton_vpn", "proton", "kaspersky"
     ]),
-    ("Wink", "wink", "😉", ["wink"], ["wink"]),
-    # Row 15
     ("Xingtu", "xingtu", "📷", ["xingtu"], ["xingtu"]),
     ("Youtube", "youtube", "🔴", ["youtube", "vidiq"], ["youtube"]),
+    # Row 15
     ("Muse AI", "muse_ai", "🎼", ["muse", "muse ai"], ["muse_ai"]),
-    # Row 16
-    ("JetBrains", "jetbrains", "💻", ["jetbrains", "intellij", "pycharm"], ["jetbrains"]),
+    ("linkedin", "linkedin", "💼", ["linkedin"], ["linkedin"]),
     ("Google One", "google_one", "1️⃣", ["google one", "drive 2tb"], ["google_one"]),
+    # Row 16
     ("NetFlix", "netflix", "🍿", ["netflix"], ["netflix"]),
-    # Row 17
-    ("Clico", "clico", "🎯", ["clico", "tryclico"], ["tryclico"]),
     ("Replit", "replit", "🌀", ["replit"], ["replit"]),
-    ("Zed", "zed", "⚡", ["zed"], ["zed"]),
-    # Row 18
     ("Alight Motion", "alight_motion", "💫", ["alight motion", "alight"], ["alight_motion"]),
+    # Row 17
     ("Wispr Flow", "wispr_flow", "🌬️", ["wispr flow", "wispr"], ["wispr_flow"]),
     ("Tool Veo3", "tool_veo3", "✦", ["tool veo3", "veo 3", "veo3", "veo"], []),
-    # Row 19
     ("Amazon Prime", "amazon_prime", "📦", ["amazon prime", "amazon", "prime video"], ["amazon_prime"]),
-    ("linkedin", "linkedin", "💼", ["linkedin"], ["linkedin"]),
+    # Row 18
+    ("Tele", "tele", "✈️", ["tele", "telegram"], ["tele"]),
     ("GenSpark", "genspark", "✨", ["genspark"], ["genspark"]),
-    # Row 20
     ("Framer", "framer", "📐", ["framer"], ["framer"]),
+    # Row 19
     ("Leonardo AI", "leonardo_ai", "🎨", ["leonardo"], ["leonardo_ai"]),
-    ("Pippit AI", "pippit_ai", "🐣", ["pippit", "pipit", "pitpit"], []),
+    ("Pippit AI", "pippit_ai", "🐣", ["pippit", "pipit", "pitpit"], ["pippit_ai"]),
+    ("Freepik", "freepik", "👑", ["freepik", "flaticon"], ["freepik"]),
+    # Row 20
+    ("Picsart", "picsart", "🟣", ["picsart"], ["picsart"]),
+    ("SCRIBD", "scribd", "📖", ["scribd"], ["scribd"]),
+    ("Seedance", "seedance", "🌱", ["seedance"], ["seedance"]),
     # Row 21
     ("Claude Official", "claude_official", "✴️", ["claude pro", "claude max", "claude official", "claude 3", "claude x5", "claude"], ["claude"]),
-    ("Google Flow Veo3 Ultra", "flow_veo3", "🔺", ["google flow", "veo3 ultra", "admin ultra"], []),
 ]
 
 BRANDS_DICT: Dict[str, Dict[str, Any]] = {
@@ -180,6 +179,12 @@ EMOJI_BRAND_MAP = {
     "genspark": "genspark",
     "amazon_prime": "amazon_prime",
     "pippit_ai": "pippit_ai",
+    "krea": "krea",
+    "tele": "tele",
+    "freepik": "freepik",
+    "picsart": "picsart",
+    "scribd": "scribd",
+    "seedance": "seedance",
 }
 
 
