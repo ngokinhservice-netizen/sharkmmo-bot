@@ -1,4 +1,5 @@
 import math
+import time
 import logging
 from typing import Optional, Union
 from aiogram import Router, F
@@ -26,6 +27,24 @@ router = Router(name="catalog")
 
 BRAND_PAGE_SIZE = 15
 
+_last_catalog_sync_time: float = 0.0
+LIVE_SYNC_THROTTLE_SECONDS: float = 45.0
+
+
+async def ensure_catalog_synced(session: AsyncSession):
+    """
+    Ensures the product catalog, new products, and stock are ALWAYS 100% up-to-date with Canboso.
+    Throttled to once every 45s to stay well under API rate limits while keeping data live.
+    """
+    global _last_catalog_sync_time
+    now = time.time()
+    if now - _last_catalog_sync_time > LIVE_SYNC_THROTTLE_SECONDS:
+        _last_catalog_sync_time = now
+        try:
+            await sync_canboso_products(session, force_refresh=True)
+        except Exception as e:
+            logger.warning(f"Live catalog auto-sync warning: {e}")
+
 
 async def render_catalog_home(
     event: Union[Message, CallbackQuery],
@@ -37,6 +56,7 @@ async def render_catalog_home(
     - Featured / Hot products shelf below the brand grid
     - Bottom button: 🔄 Cập nhật sản phẩm
     """
+    await ensure_catalog_synced(session)
     featured = await get_featured_store_products(session, limit=6)
     feat_dicts = [
         {
@@ -81,6 +101,7 @@ async def render_brand_packages(
     - Pagination if more than BRAND_PAGE_SIZE packages
     - Back to brand catalog button
     """
+    await ensure_catalog_synced(session)
     meta = BRANDS_DICT.get(slug, {
         "name": slug.title(),
         "slug": slug,
@@ -195,6 +216,7 @@ async def handle_legacy_tag(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data.startswith("prod:"))
 async def callback_product_detail(callback: CallbackQuery, session: AsyncSession):
+    await ensure_catalog_synced(session)
     product_id = callback.data.split("prod:", 1)[1]
     q = select(ProductCache).where(ProductCache.product_id == product_id)
     res = await session.execute(q)

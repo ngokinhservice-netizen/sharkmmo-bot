@@ -115,28 +115,63 @@ class PaymentService:
         tx.confirmed_by = confirmed_by
         if gateway_tx_id:
             tx.gateway_tx_id = str(gateway_tx_id)
+
+        # Extract stored QR message metadata to auto-delete QR image
+        qr_meta = tx.gateway_data if isinstance(tx.gateway_data, dict) else {}
+        qr_chat_id = qr_meta.get("chat_id")
+        qr_msg_id = qr_meta.get("message_id")
+
         if gateway_data:
-            tx.gateway_data = gateway_data
+            merged_meta = dict(qr_meta)
+            merged_meta["sepay_payload"] = gateway_data
+            tx.gateway_data = merged_meta
 
         await session.commit()
         logger.info(f"Payment confirmed: tx={tx.transaction_code}, amount={tx.amount}, user={user.telegram_id}, by={confirmed_by}")
 
-        # Send Telegram notification to user
+        # Auto-delete QR code & send confirmation notification
         if settings.BOT_TOKEN and not settings.BOT_TOKEN.startswith("dummy"):
             try:
                 from backend.app.bot.bot import create_bot
                 bot = create_bot()
                 async with bot:
+                    # 1. DELETE QR MESSAGE SO IT DISAPPEARS IMMEDIATELY
+                    if qr_chat_id and qr_msg_id:
+                        try:
+                            await bot.delete_message(chat_id=qr_chat_id, message_id=qr_msg_id)
+                            logger.info(f"Successfully deleted QR message {qr_msg_id} in chat {qr_chat_id}")
+                        except Exception as e_del:
+                            logger.warning(f"Could not delete QR message {qr_msg_id}: {e_del}")
+                            try:
+                                await bot.edit_message_caption(
+                                    chat_id=qr_chat_id,
+                                    message_id=qr_msg_id,
+                                    caption="✅ <b>GIAO DỊCH ĐÃ THANH TOÁN THÀNH CÔNG!</b>",
+                                    parse_mode="HTML"
+                                )
+                            except Exception:
+                                pass
+
+                    # 2. SEND SUCCESS NOTIFICATION
+                    time_str = utcnow().strftime("%H:%M:%S %d/%m/%Y")
                     msg = (
-                        "🎉 <b>NẠP TIỀN THÀNH CÔNG!</b>\n"
+                        "🎉 <b>CỘNG TIỀN THÀNH CÔNG!</b>\n"
                         "🦈 ━━━━━━━━━━━━━━━━━━━━━━ 🦈\n\n"
-                        f"🆔 Mã giao dịch: <code>{tx.transaction_code}</code>\n"
-                        f"💰 Số tiền: <b>+{tx.amount:,.0f} VND</b>\n"
-                        f"💳 Số dư ví hiện có: <b>{user.balance:,.0f} VND</b>\n\n"
-                        "⚡ <i>Hệ thống tự động cộng tiền qua SePay thành công!</i>\n"
-                        "Bấm <b>🛍️ Mua sản phẩm</b> để bắt đầu mua sắm ngay!"
+                        f"💰 <b>Số tiền nhận:</b> <code>+{tx.amount:,.0f} VND</code>\n"
+                        f"📝 <b>Nội dung:</b> <code>{tx.transfer_content}</code>\n"
+                        f"🏦 <b>Tài khoản nhận:</b> VPBank - <code>0342938622</code>\n"
+                        f"👤 <b>Chủ tài khoản:</b> LE DANG KHOA\n"
+                        f"🆔 <b>Mã SePay:</b> <code>{gateway_tx_id or tx.transaction_code}</code>\n"
+                        f"⏰ <b>Thời gian:</b> <code>{time_str}</code>\n\n"
+                        "⚡ <i>Hệ thống SePay tự động ghi nhận tiền vào tài khoản!</i>"
                     )
-                    await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode="HTML")
+
+                    target_chat = qr_chat_id or user.telegram_id
+                    await bot.send_message(chat_id=target_chat, text=msg, parse_mode="HTML")
+
+                    admin_chat_id = settings.ADMIN_IDS[0] if settings.ADMIN_IDS else 8650996593
+                    if str(target_chat) != str(admin_chat_id):
+                        await bot.send_message(chat_id=admin_chat_id, text=msg, parse_mode="HTML")
             except Exception as e_notify:
                 logger.error(f"Failed to send deposit confirmation notification: {e_notify}")
 

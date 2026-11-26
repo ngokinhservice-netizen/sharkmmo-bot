@@ -378,3 +378,5 @@ def get_admin_deposit_keyboard(transaction_id: int) -> InlineKeyboardMarkup:
 # Backward compatibility aliases
 get_store_catalog_keyboard = get_brand_catalog_keyboard
 get_categories_keyboard = get_brand_catalog_keyboard
+get_qr_amount_keyboard = get_deposit_amounts_keyboard
+get_qr_action_keyboard = get_deposit_action_keyboard

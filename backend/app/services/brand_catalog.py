@@ -114,30 +114,98 @@ BRANDS_DICT: Dict[str, Dict[str, Any]] = {
 }
 
 
+EMOJI_BRAND_MAP = {
+    "antigravity": "antigravity",
+    "chatgpt": "chatgpt",
+    "apigpt": "api_codex",
+    "kling": "kling",
+    "youtube": "youtube",
+    "gmail": "gmail",
+    "higgfield": "higgsfield",
+    "dreamina": "dreamina",
+    "grok": "grok",
+    "canva": "canva",
+    "muse_ai": "muse_ai",
+    "adobe": "adobe",
+    "meitu": "meitu",
+    "microsoft_office_365": "microsoft_365",
+    "windows": "microsoft_365",
+    "notion": "notion",
+    "capcut": "capcut",
+    "google_one": "google_one",
+    "gamma": "gamma",
+    "zoom": "zoom",
+    "express": "vpn_proxy",
+    "nordvpn": "vpn_proxy",
+    "hma_vpn": "vpn_proxy",
+    "surfshark": "vpn_proxy",
+    "adguard_vpn": "vpn_proxy",
+    "hotspot_shield": "vpn_proxy",
+    "purevpn": "vpn_proxy",
+    "norton_vpn": "vpn_proxy",
+    "proton": "vpn_proxy",
+    "kaspersky": "vpn_proxy",
+    "heygen": "heygen",
+    "cursor": "cursor",
+    "wink": "wink",
+    "minimax": "minimax",
+    "spotify": "spotify",
+    "elevenlabs": "elevenlabs",
+    "duolingo": "duolingo",
+    "perplexity": "perplexity",
+    "autodesk": "autodesk",
+    "facebook": "facebook",
+    "runway": "runway",
+    "openart": "openart",
+    "suno": "suno",
+    "xingtu": "xingtu",
+    "figma": "figma",
+    "gpm_login": "gpm",
+    "quizlet": "quizlet",
+    "lovable": "lovable",
+    "locket": "locket",
+    "outlook": "outlook",
+    "leonardo_ai": "leonardo_ai",
+    "linkedin": "linkedin",
+    "netflix": "netflix",
+    "jetbrains": "jetbrains",
+    "mb": "mb_bank",
+    "manus": "manus",
+    "replit": "replit",
+    "tryclico": "clico",
+    "alight_motion": "alight_motion",
+    "zed": "zed",
+    "wispr_flow": "wispr_flow",
+    "framer": "framer",
+    "genspark": "genspark",
+    "amazon_prime": "amazon_prime",
+    "pippit_ai": "pippit_ai",
+}
+
+
 def match_product_to_brand(name: str, emoji: Optional[str] = None) -> str:
     """Finds the most specific brand slug for a product."""
     n = name.lower()
     em = (emoji or "").lower()
 
-    # Priority compound brands first
+    # 1. Direct authoritative emoji from Canboso:
+    if em:
+        if em == "claude":
+            if "api claude" in n or "build api" in n:
+                return "api_claude"
+            return "claude_official"
+        if em in EMOJI_BRAND_MAP:
+            return EMOJI_BRAND_MAP[em]
+
+    # 2. Priority compound brands for products with none emoji
     priority_slugs = ["flow_veo3", "api_claude", "api_codex", "api_deepseek", "api_gemini", "tool_veo3"]
     for slug in priority_slugs:
         meta = BRANDS_DICT[slug]
         if any(kw in n for kw in meta["keywords"]):
             return slug
 
-    # Match by emoji if present
-    if em:
-        for slug, meta in BRANDS_DICT.items():
-            if slug in priority_slugs:
-                continue
-            if em in meta["emojis"] or any(e in em for e in meta["emojis"]):
-                return slug
-
-    # Match by keywords
+    # 3. Match by keywords
     for slug, meta in BRANDS_DICT.items():
-        if slug in priority_slugs:
-            continue
         if any(kw in n for kw in meta["keywords"]):
             return slug
 
@@ -172,19 +240,77 @@ async def get_brand_products(
     base_q = select(ProductCache).where(ProductCache.is_active == True)
     count_q = select(func.count(ProductCache.id)).where(ProductCache.is_active == True)
 
-    # First check if products have brand_slug populated
-    brand_cond = (ProductCache.brand_slug == slug)
-    count_by_slug = (await session.execute(count_q.where(brand_cond))).scalar() or 0
-
-    if count_by_slug > 0:
-        base_q = base_q.where(brand_cond)
-        total_count = count_by_slug
+    # Cross-brand custom filtering so all relevant products are accessible
+    if slug == "antigravity":
+        cond = or_(
+            ProductCache.brand_slug == "antigravity",
+            ProductCache.emoji == "antigravity",
+            ProductCache.name.ilike("%antigravity%"),
+            ProductCache.name.ilike("%admin ultra%"),
+            ProductCache.name.ilike("%google ultra%")
+        )
+    elif slug == "flow_veo3":
+        cond = or_(
+            ProductCache.brand_slug == "flow_veo3",
+            ProductCache.name.ilike("%veo3 ultra%"),
+            ProductCache.name.ilike("%google flow%"),
+            ProductCache.name.ilike("%admin ultra%")
+        )
+    elif slug == "tool_veo3":
+        cond = or_(
+            ProductCache.brand_slug == "tool_veo3",
+            ProductCache.name.ilike("%veo3%"),
+            ProductCache.name.ilike("%veo 3%")
+        )
+    elif slug == "api_gemini":
+        cond = or_(
+            ProductCache.brand_slug == "api_gemini",
+            ProductCache.name.ilike("%gemini%")
+        )
+    elif slug == "api_claude":
+        cond = or_(
+            ProductCache.brand_slug == "api_claude",
+            ProductCache.name.ilike("%api claude%"),
+            ProductCache.name.ilike("%build api%")
+        )
+    elif slug == "claude_official":
+        cond = or_(
+            ProductCache.brand_slug == "claude_official",
+            (ProductCache.name.ilike("%claude%") & ~ProductCache.name.ilike("%api claude%"))
+        )
+    elif slug == "chatgpt":
+        cond = or_(
+            ProductCache.brand_slug == "chatgpt",
+            ProductCache.name.ilike("%chatgpt%"),
+            ProductCache.name.ilike("%chat gpt%")
+        )
     else:
-        cond = get_brand_filter_condition(slug)
-        if cond is not None:
-            base_q = base_q.where(cond)
-            count_q = count_q.where(cond)
-        total_count = (await session.execute(count_q)).scalar() or 0
+        brand_cond = (ProductCache.brand_slug == slug)
+        keyword_cond = get_brand_filter_condition(slug)
+        cond = or_(brand_cond, keyword_cond) if keyword_cond is not None else brand_cond
+
+    base_q = base_q.where(cond)
+    count_q = count_q.where(cond)
+    total_count = (await session.execute(count_q)).scalar() or 0
+
+    # In-stock products first, high availability first
+    in_stock_order = case((ProductCache.available_qty > 0, 0), else_=1)
+    if slug == "antigravity":
+        is_ultra_order = case((ProductCache.name.ilike('%ultra%') | ProductCache.name.ilike('%antigravity%'), 0), else_=1)
+        base_q = base_q.order_by(
+            in_stock_order,
+            is_ultra_order,
+            ProductCache.available_qty.desc(),
+            ProductCache.sold_qty.desc(),
+            ProductCache.id.asc()
+        )
+    else:
+        base_q = base_q.order_by(
+            in_stock_order,
+            ProductCache.available_qty.desc(),
+            ProductCache.sold_qty.desc(),
+            ProductCache.id.asc()
+        )
     total_pages = max(1, math.ceil(total_count / page_size))
 
     if page < 1:

@@ -28,7 +28,7 @@ async def background_sync_worker():
     logger.info("Background product sync worker started.")
     while True:
         try:
-            interval_sec = max(300, settings.AUTO_SYNC_INTERVAL_MINUTES * 60)
+            interval_sec = max(180, settings.AUTO_SYNC_INTERVAL_MINUTES * 60)
             await asyncio.sleep(interval_sec)
             if settings.CANBOSO_API_KEY:
                 logger.info("Executing scheduled product sync...")
@@ -61,15 +61,13 @@ async def seed_default_data():
             await session.commit()
             logger.info("Seeded default global pricing rule.")
 
-        # If CANBOSO_API_KEY is present and product cache is empty, do an initial sync
+        # Always sync latest products from Canboso on startup
         if settings.CANBOSO_API_KEY:
-            prod_count = await session.scalar(select(ProductCache.id))
-            if not prod_count:
-                logger.info("Initiating first-time product sync from Canboso API...")
-                try:
-                    await sync_canboso_products(session, force_refresh=True)
-                except Exception as e:
-                    logger.warning(f"Initial Canboso sync skipped or failed: {e}")
+            logger.info("Initiating startup product sync from Canboso API...")
+            try:
+                await sync_canboso_products(session, force_refresh=True)
+            except Exception as e:
+                logger.warning(f"Startup Canboso sync warning: {e}")
 
 
 @asynccontextmanager

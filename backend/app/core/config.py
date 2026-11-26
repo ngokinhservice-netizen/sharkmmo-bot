@@ -1,5 +1,5 @@
 import json
-from typing import List, Union
+from typing import List, Union, Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Telegram Bot
     BOT_TOKEN: str = Field(default="", description="Telegram Bot Token from @BotFather")
-    ADMIN_IDS: Union[List[int], str] = Field(default="1336962312", description="List of Telegram user IDs with Admin privileges")
+    ADMIN_IDS: List[int] = Field(default_factory=lambda: [8650996593], description="List of Telegram user IDs with Admin privileges")
 
     # Canboso API
     CANBOSO_API_KEY: str = Field(default="", description="Buyer API key from Canboso (x-buyer-key)")
@@ -54,20 +54,23 @@ class Settings(BaseSettings):
 
     @field_validator("ADMIN_IDS", mode="before")
     @classmethod
-    def parse_admin_ids(cls, v: Union[str, List[int]]) -> List[int]:
+    def parse_admin_ids(cls, v: Any) -> List[int]:
+        if isinstance(v, (int, float)):
+            return [int(v)]
         if isinstance(v, list):
             return [int(x) for x in v]
         if isinstance(v, str):
             v = v.strip()
             if not v:
-                return []
+                return [8650996593]
             if v.startswith("[") and v.endswith("]"):
                 try:
                     return [int(x) for x in json.loads(v)]
                 except Exception:
                     pass
-            return [int(x.strip()) for x in v.split(",") if x.strip().isdigit()]
-        return []
+            parsed = [int(x.strip()) for x in v.split(",") if x.strip().isdigit()]
+            return parsed if parsed else [8650996593]
+        return [8650996593]
 
 
 settings = Settings()

@@ -1,10 +1,10 @@
 @echo off
-title SHARKMMO Telegram Bot & Backend
+title SHARK Telegram Bot & SePay Notifier
 chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ===================================================
-echo     SHARKMMO - HỆ SINH THÁI SẢN PHẨM MMO TỰ ĐỘNG
+echo     SHARK - SEPAY ALERT & QR PAYMENT BOT
 echo ===================================================
 echo.
 echo Đang kiểm tra môi trường Python...
@@ -15,9 +15,9 @@ if errorlevel 1 (
     exit /b
 )
 
-echo Đang khởi động SHARKMMO Backend & Telegram Bot...
-echo Bot Telegram: @sharkkmmo_ai
-echo API Docs: http://localhost:8000/docs
+echo Đang khởi động SHARK SePay Webhook & Telegram Bot...
+echo Bot Telegram: @sharklearningbot_bot
+echo Webhook SePay: http://localhost:8000/api/v1/webhooks/sepay
 echo.
 
 set PYTHONPATH=.
