@@ -203,10 +203,10 @@ def match_product_to_brand(name: str, emoji: Optional[str] = None) -> str:
             return EMOJI_BRAND_MAP[em]
 
     # 2. Priority compound brands for products with none emoji
-    priority_slugs = ["flow_veo3", "api_claude", "api_codex", "api_deepseek", "api_gemini", "tool_veo3"]
+    priority_slugs = ["api_claude", "api_codex", "api_deepseek", "api_gemini", "tool_veo3"]
     for slug in priority_slugs:
-        meta = BRANDS_DICT[slug]
-        if any(kw in n for kw in meta["keywords"]):
+        meta = BRANDS_DICT.get(slug)
+        if meta and any(kw in n for kw in meta["keywords"]):
             return slug
 
     # 3. Match by keywords
@@ -254,18 +254,12 @@ async def get_brand_products(
             ProductCache.name.ilike("%admin ultra%"),
             ProductCache.name.ilike("%google ultra%")
         )
-    elif slug == "flow_veo3":
-        cond = or_(
-            ProductCache.brand_slug == "flow_veo3",
-            ProductCache.name.ilike("%veo3 ultra%"),
-            ProductCache.name.ilike("%google flow%"),
-            ProductCache.name.ilike("%admin ultra%")
-        )
     elif slug == "tool_veo3":
         cond = or_(
             ProductCache.brand_slug == "tool_veo3",
             ProductCache.name.ilike("%veo3%"),
-            ProductCache.name.ilike("%veo 3%")
+            ProductCache.name.ilike("%veo 3%"),
+            ProductCache.name.ilike("%google flow%")
         )
     elif slug == "api_gemini":
         cond = or_(
